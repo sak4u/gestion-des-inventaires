@@ -8,10 +8,10 @@ export class MailService {
   constructor() {
     this.transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST || 'smtp.mailtrap.io',
-      port: parseInt(process.env.MAIL_PORT) || 2525,
+      port: parseInt(process.env.MAIL_PORT || '2525', 10),
       auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
+        user: process.env.MAIL_USER || 'your_user',
+        pass: process.env.MAIL_PASS || 'your_pass',
       },
     });
   }
