@@ -8,20 +8,40 @@ datasource db {
 }
 
 model Role {
-  id          String @id @default(uuid())
-  name        String @unique
+  id          String  @id @default(uuid())
+  name        String  @unique
   description String?
   users       User[]
 }
 
 model User {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   name         String
-  email        String   @unique
+  email        String    @unique
   password     String
-  dateCreation DateTime @default(now())
-  role         Role     @relation(fields: [roleId], references: [id])
+  dateCreation DateTime  @default(now())
+  role         Role      @relation(fields: [roleId], references: [id])
   roleId       String
   resetCode    String?
   resetExpires DateTime?
+}
+
+model Warehouse {
+  id        String   @id @default(uuid())
+  name      String
+  location  String?
+  capacity  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Supplier {
+  id          String   @id @default(uuid())
+  name        String
+  contactName String?
+  email       String?  @unique
+  phone       String?
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
