@@ -5,10 +5,6 @@ export class UpdateSupplierDto {
   @IsOptional()
   name?: string;
 
-  @IsString()
-  @IsOptional()
-  contactName?: string;
-
   @IsEmail()
   @IsOptional()
   email?: string;
