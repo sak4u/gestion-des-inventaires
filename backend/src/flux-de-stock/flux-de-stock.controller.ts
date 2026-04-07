@@ -1,0 +1,48 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
+import { FluxDeStockService } from './flux-de-stock.service';
+import { CreateFluxDeStockDto } from './dto/create-flux-de-stock.dto';
+import { UpdateFluxDeStockDto } from './dto/update-flux-de-stock.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@UseGuards(JwtAuthGuard)
+@Controller('flux-de-stocks')
+export class FluxDeStockController {
+  constructor(private readonly fluxDeStockService: FluxDeStockService) {}
+
+  @Post()
+  create(@Body() createFluxDeStockDto: CreateFluxDeStockDto) {
+    return this.fluxDeStockService.create(createFluxDeStockDto);
+  }
+
+  @Get()
+  findAll() {
+    return this.fluxDeStockService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.fluxDeStockService.findOne(id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() updateFluxDeStockDto: UpdateFluxDeStockDto,
+  ) {
+    return this.fluxDeStockService.update(id, updateFluxDeStockDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.fluxDeStockService.remove(id);
+  }
+}

@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 
 @Injectable()
 export class MailService {
-  private transporter;
+  private readonly transporter: Transporter;
 
   constructor() {
     this.transporter = nodemailer.createTransport({
       host: process.env.MAIL_HOST,
-      port: parseInt(process.env.MAIL_PORT as string || '2525', 10),
+      port: parseInt((process.env.MAIL_PORT as string) || '2525', 10),
       auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASS,
@@ -30,7 +30,7 @@ export class MailService {
       console.log(`Email sent to ${email}`);
     } catch (error) {
       console.error('Error sending email:', error);
-      throw new Error('Erreur lors de l\'envoi de l\'email');
+      throw new Error("Erreur lors de l'envoi de l'email");
     }
   }
 }

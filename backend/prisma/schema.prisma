@@ -15,32 +15,123 @@ model Role {
 }
 
 model User {
-  id           String    @id @default(uuid())
+  id           String        @id @default(uuid())
   name         String
-  email        String    @unique
+  email        String        @unique
   password     String
-  dateCreation DateTime  @default(now())
-  role         Role      @relation(fields: [roleId], references: [id])
+  dateCreation DateTime      @default(now())
+  role         Role          @relation(fields: [roleId], references: [id])
   roleId       String
   resetCode    String?
   resetExpires DateTime?
+  commandes    Commande[]    @relation("UserOrders")
+  fluxDeStocks FluxDeStock[] @relation("UserStockFlows")
 }
 
-model Warehouse {
-  id        String   @id @default(uuid())
-  name      String
-  location  String?
-  capacity  Int?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Entrepot {
+  id             String        @id @default(uuid())
+  nom            String
+  adresse        String?
+  capaciteMax    Int?
+  stockActuelle  Int?          @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  fluxDeStocks   FluxDeStock[]
 }
 
-model Supplier {
-  id          String   @id @default(uuid())
-  name        String
-  email       String?  @unique
-  phone       BigInt?
-  address     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Fournisseur {
+  id                  String               @id @default(uuid())
+  nom                 String
+  email               String?              @unique
+  telephone           String?
+  adresse             String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  commandes           Commande[]           @relation("SupplierOrders")
+  fournisseurProduits FournisseurProduit[]
+}
+
+enum TypeStock {
+  achat
+  vente
+  perte
+  retour
+  correction_inventaire
+}
+
+model Produit {
+  id                  String               @id @default(uuid())
+  nom                 String
+  codeBare            String               @unique
+  category            String
+  stockAlert          Int
+  quantite            Int                  @default(0)
+  prixActuel          Float?               @default(0)
+  fournisseurProduits FournisseurProduit[]
+  commandesLigne      CommandeLigne[]
+  fluxDeStocks        FluxDeStock[]
+  predictions         Prediction[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model FournisseurProduit {
+  id            String      @id @default(uuid())
+  prixAchat     Float?      @default(0)
+  fournisseurId String
+  fournisseur   Fournisseur @relation(fields: [fournisseurId], references: [id])
+  produitId     String
+  produit       Produit     @relation(fields: [produitId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Commande {
+  id             String          @id @default(uuid())
+  etat           String
+  dateCreation   DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  userId         String
+  user           User            @relation("UserOrders", fields: [userId], references: [id])
+  fournisseurId  String
+  fournisseur    Fournisseur     @relation("SupplierOrders", fields: [fournisseurId], references: [id])
+  commandesLigne CommandeLigne[]
+}
+
+model CommandeLigne {
+  id                String   @id @default(uuid())
+  quantite          Int
+  prixUnitaireAchat Float?   @default(0)
+  commandeId        String
+  commande          Commande @relation(fields: [commandeId], references: [id])
+  produitId         String
+  produit           Produit  @relation(fields: [produitId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model FluxDeStock {
+  id            String    @id @default(uuid())
+  quantite      Int
+  type          TypeStock
+  date          DateTime  @default(now())
+  creerParId    String
+  creerPar      User      @relation("UserStockFlows", fields: [creerParId], references: [id])
+  produitId     String
+  produit       Produit   @relation(fields: [produitId], references: [id])
+  entrepotId    String
+  entrepot      Entrepot  @relation(fields: [entrepotId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Prediction {
+  id                    String   @id @default(uuid())
+  estimationSortieDate  DateTime
+  quantiteRecommande    Int
+  CMJ                   Float
+  produitId             String
+  produit               Produit  @relation(fields: [produitId], references: [id])
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
