@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { CustomLogger } from './custom-logger';
 
 Object.defineProperty(BigInt.prototype, 'toJSON', {
   value(this: bigint) {
@@ -11,7 +12,9 @@ Object.defineProperty(BigInt.prototype, 'toJSON', {
 });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: new CustomLogger(),
+  });
 
   app.enableCors({
     origin: process.env.FRONTEND_URL ?? '*',
@@ -29,6 +32,7 @@ async function bootstrap() {
   );
 
   await app.listen(process.env.PORT ?? 3000);
+  console.log(`Server is running on http://localhost:${process.env.PORT ?? 3000}`);
 }
 
 void bootstrap();

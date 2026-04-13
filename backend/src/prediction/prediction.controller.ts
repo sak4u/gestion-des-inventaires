@@ -2,15 +2,11 @@ import {
   Controller,
   Get,
   Post,
-  Body,
-  Patch,
   Param,
   Delete,
   UseGuards,
 } from '@nestjs/common';
 import { PredictionService } from './prediction.service';
-import { CreatePredictionDto } from './dto/create-prediction.dto';
-import { UpdatePredictionDto } from './dto/update-prediction.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
@@ -18,29 +14,39 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class PredictionController {
   constructor(private readonly predictionService: PredictionService) {}
 
-  @Post()
-  create(@Body() createPredictionDto: CreatePredictionDto) {
-    return this.predictionService.create(createPredictionDto);
-  }
-
+  // ── List all predictions (most recent first) ──────────────────
   @Get()
   findAll() {
     return this.predictionService.findAll();
   }
 
+  // ── Get the latest prediction for a specific product ──────────
+  // IMPORTANT: This route MUST be declared BEFORE ':id' to prevent
+  // NestJS from matching "product" as an ID parameter.
+  @Get('product/:produitId')
+  findByProduct(@Param('produitId') produitId: string) {
+    return this.predictionService.findLatestByProduct(produitId);
+  }
+
+  // ── Get a single prediction by ID ─────────────────────────────
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.predictionService.findOne(id);
   }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updatePredictionDto: UpdatePredictionDto,
-  ) {
-    return this.predictionService.update(id, updatePredictionDto);
+  // ── Generate a prediction for one product ─────────────────────
+  @Post('generate/:produitId')
+  generate(@Param('produitId') produitId: string) {
+    return this.predictionService.generatePrediction(produitId);
   }
 
+  // ── Generate predictions for ALL products (batch) ─────────────
+  @Post('generate-all')
+  generateAll() {
+    return this.predictionService.generateAllPredictions();
+  }
+
+  // ── Delete a prediction ───────────────────────────────────────
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.predictionService.remove(id);

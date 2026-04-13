@@ -49,6 +49,7 @@ model Fournisseur {
   updatedAt           DateTime             @updatedAt
   commandes           Commande[]           @relation("SupplierOrders")
   fournisseurProduits FournisseurProduit[]
+  propositions        PropositionCommande[]
 }
 
 enum TypeStock {
@@ -71,19 +72,23 @@ model Produit {
   commandesLigne      CommandeLigne[]
   fluxDeStocks        FluxDeStock[]
   predictions         Prediction[]
+  propositions        PropositionCommande[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
 
 model FournisseurProduit {
-  id            String      @id @default(uuid())
-  prixAchat     Float?      @default(0)
-  fournisseurId String
-  fournisseur   Fournisseur @relation(fields: [fournisseurId], references: [id])
-  produitId     String
-  produit       Produit     @relation(fields: [produitId], references: [id])
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id             String      @id @default(uuid())
+  prixAchat      Float?      @default(0)
+  delaiLivraison Int         @default(5) // Delivery time in days per supplier
+  fournisseurId  String
+  fournisseur    Fournisseur @relation(fields: [fournisseurId], references: [id])
+  produitId      String
+  produit        Produit     @relation(fields: [produitId], references: [id])
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([fournisseurId, produitId]) // One entry per supplier-product pair
 }
 
 model Commande {
@@ -130,8 +135,34 @@ model Prediction {
   estimationSortieDate  DateTime
   quantiteRecommande    Int
   CMJ                   Float
-  produitId             String
+  methode               String   @default("hybrid")
+  fiabilite             Float    @default(0)
+  explication           String   @default("")  // Human-readable prediction explanation
+  tendance              String   @default("stable") // "increasing" | "decreasing" | "stable"
+  produitId             String   @unique        // Only ONE active prediction per product
   produit               Produit  @relation(fields: [produitId], references: [id])
+  propositions          PropositionCommande[]
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+}
+
+// ── Smart Replenishment: purchase order suggestions ──
+model PropositionCommande {
+  id               String      @id @default(uuid())
+  quantiteProposee Int
+  dateProposition  DateTime    @default(now())
+  statut           String      @default("EN_ATTENTE") // EN_ATTENTE | ACCEPTEE | REFUSEE
+  scoreFournisseur Float?      @default(0)
+
+  produitId        String
+  produit          Produit     @relation(fields: [produitId], references: [id])
+
+  fournisseurId    String
+  fournisseur      Fournisseur @relation(fields: [fournisseurId], references: [id])
+
+  predictionId     String
+  prediction       Prediction  @relation(fields: [predictionId], references: [id])
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 }

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -12,9 +13,12 @@ import { CommandeModule } from './commande/commande.module';
 import { CommandeLigneModule } from './commande-ligne/commande-ligne.module';
 import { FluxDeStockModule } from './flux-de-stock/flux-de-stock.module';
 import { PredictionModule } from './prediction/prediction.module';
+import { PropositionCommandeModule } from './proposition-commande/proposition-commande.module';
+import { StockSchedulerModule } from './stock-scheduler/stock-scheduler.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     MailModule,
@@ -26,6 +30,8 @@ import { PredictionModule } from './prediction/prediction.module';
     CommandeLigneModule,
     FluxDeStockModule,
     PredictionModule,
+    PropositionCommandeModule,
+    StockSchedulerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

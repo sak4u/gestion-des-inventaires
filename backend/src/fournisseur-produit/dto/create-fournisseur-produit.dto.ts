@@ -12,4 +12,8 @@ export class CreateFournisseurProduitDto {
   @IsUUID()
   @IsNotEmpty()
   produitId!: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  delaiLivraison!: number;
 }
