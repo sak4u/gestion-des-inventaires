@@ -14,10 +14,4 @@ export class CreateEntrepotDto {
   @Min(0)
   @Type(() => Number)
   capaciteMax?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Type(() => Number)
-  stockActuelle?: number;
 }

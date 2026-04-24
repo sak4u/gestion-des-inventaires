@@ -12,8 +12,11 @@ import { CommandeLigneService } from './commande-ligne.service';
 import { CreateCommandeLigneDto } from './dto/create-commande-ligne.dto';
 import { UpdateCommandeLigneDto } from './dto/update-commande-ligne.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('RESPONSABLE_APPRO', 'ADMINISTRATEUR')
 @Controller('commande-lignes')
 export class CommandeLigneController {
   constructor(private readonly commandeLigneService: CommandeLigneService) {}

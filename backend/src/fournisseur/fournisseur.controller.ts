@@ -14,8 +14,11 @@ import { CreateFournisseurDto } from './dto/create-fournisseur.dto';
 import { UpdateFournisseurDto } from './dto/update-fournisseur.dto';
 import { GetFournisseursFilterDto } from './dto/get-fournisseurs-filter.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMINISTRATEUR', 'RESPONSABLE_APPRO') // Seuls les administrateurs et responsables d'approvisionnement peuvent gérer les fournisseurs
 @Controller('fournisseurs')
 export class FournisseurController {
   constructor(private readonly fournisseurService: FournisseurService) {}

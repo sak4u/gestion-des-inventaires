@@ -22,11 +22,4 @@ export class CreateProduitDto {
   @IsOptional()
   @Min(0)
   prixActuel?: number;
-
-
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  quantite?: number;
 }

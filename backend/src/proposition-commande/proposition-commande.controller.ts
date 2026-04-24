@@ -2,14 +2,19 @@ import {
   Controller,
   Get,
   Post,
+  Body,
   Param,
   UseGuards,
   Request,
 } from '@nestjs/common';
 import { PropositionCommandeService } from './proposition-commande.service';
+import { AcceptPropositionDto } from './dto/accept-proposition.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('RESPONSABLE_APPRO','ADMINISTRATEUR')
 @Controller('propositions')
 export class PropositionCommandeController {
   constructor(
@@ -28,24 +33,27 @@ export class PropositionCommandeController {
     return this.propositionService.findPending();
   }
 
-  // ── Get a single proposition by ID ────────────────────────────
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.propositionService.findOne(id);
-  }
-
   // ── Manually trigger check for all products ───────────────────
   @Post('check-all')
   checkAll() {
     return this.propositionService.checkAllProducts();
   }
 
-  // ── Accept a proposition → creates a real Commande ────────────
+  // ── Get a single proposition by ID ────────────────────────────
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.propositionService.findOne(id);
+  }
+
+  // ── Accept a proposition → choisir l'entrepôt de réception ───
   @Post(':id/accept')
-  accept(@Param('id') id: string, @Request() req: any) {
-    // Extract userId from JWT payload
-    const userId = req.user?.id ?? req.user?.sub;
-    return this.propositionService.accept(id, userId);
+  accept(
+    @Param('id') id: string,
+    @Body() dto: AcceptPropositionDto,
+    @Request() req: any,
+  ) {
+    const userId = req.user?.userId ?? req.user?.sub;
+    return this.propositionService.accept(id, userId, dto.entrepotId);
   }
 
   // ── Reject a proposition ──────────────────────────────────────

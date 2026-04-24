@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PredictionService } from '../prediction/prediction.service';
+import { PredictionService } from '../ai/prediction/prediction.service';
 import { PropositionCommandeService } from '../proposition-commande/proposition-commande.service';
 
 /**

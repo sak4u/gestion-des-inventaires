@@ -7,6 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  ENUMS
+// ══════════════════════════════════════════════════════════════════════
+
+enum TypeStock {
+  achat
+  vente
+  perte
+  retour
+  correction_inventaire
+  transfert
+}
+
+enum EtatCommande {
+  EN_COURS
+  FERMEE
+  LIVREE
+  ANNULEE
+}
+
+enum StatutProposition {
+  EN_ATTENTE
+  ACCEPTEE
+  REFUSEE
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  AUTH & USERS
+// ══════════════════════════════════════════════════════════════════════
+
 model Role {
   id          String  @id @default(uuid())
   name        String  @unique
@@ -28,16 +58,27 @@ model User {
   fluxDeStocks FluxDeStock[] @relation("UserStockFlows")
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  ENTREPÔT (WAREHOUSE)
+//  ⚠️  stockActuelle SUPPRIMÉ — la source de vérité est
+//      SUM(StockEntrepot.quantite) WHERE entrepotId = X
+// ══════════════════════════════════════════════════════════════════════
+
 model Entrepot {
-  id             String        @id @default(uuid())
+  id             String          @id @default(uuid())
   nom            String
   adresse        String?
   capaciteMax    Int?
-  stockActuelle  Int?          @default(0)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   fluxDeStocks   FluxDeStock[]
+  stockEntrepots StockEntrepot[]
+  commandes      Commande[]
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  FOURNISSEUR (SUPPLIER)
+// ══════════════════════════════════════════════════════════════════════
 
 model Fournisseur {
   id                  String               @id @default(uuid())
@@ -52,13 +93,11 @@ model Fournisseur {
   propositions        PropositionCommande[]
 }
 
-enum TypeStock {
-  achat
-  vente
-  perte
-  retour
-  correction_inventaire
-}
+// ══════════════════════════════════════════════════════════════════════
+//  PRODUIT (PRODUCT)
+//  ⚠️  quantite JAMAIS stocké ici — le stock total se calcule via
+//      SUM(StockEntrepot.quantite) WHERE produitId = X
+// ══════════════════════════════════════════════════════════════════════
 
 model Produit {
   id                  String               @id @default(uuid())
@@ -66,103 +105,177 @@ model Produit {
   codeBare            String               @unique
   category            String
   stockAlert          Int
-  quantite            Int                  @default(0)
-  prixActuel          Float?               @default(0)
+  prixActuel          Float                @default(0)
   fournisseurProduits FournisseurProduit[]
   commandesLigne      CommandeLigne[]
   fluxDeStocks        FluxDeStock[]
   predictions         Prediction[]
   propositions        PropositionCommande[]
+  stockEntrepots      StockEntrepot[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  FOURNISSEUR-PRODUIT (SUPPLIER-PRODUCT LINK)
+// ══════════════════════════════════════════════════════════════════════
+
 model FournisseurProduit {
   id             String      @id @default(uuid())
-  prixAchat      Float?      @default(0)
-  delaiLivraison Int         @default(5) // Delivery time in days per supplier
+  prixAchat      Float       @default(0)
+  delaiLivraison Int         @default(5)
   fournisseurId  String
-  fournisseur    Fournisseur @relation(fields: [fournisseurId], references: [id])
+  fournisseur    Fournisseur @relation(fields: [fournisseurId], references: [id], onDelete: Cascade)
   produitId      String
-  produit        Produit     @relation(fields: [produitId], references: [id])
+  produit        Produit     @relation(fields: [produitId], references: [id], onDelete: Cascade)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  @@unique([fournisseurId, produitId]) // One entry per supplier-product pair
+  @@unique([fournisseurId, produitId])
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  COMMANDE (PURCHASE ORDER)
+// ══════════════════════════════════════════════════════════════════════
 
 model Commande {
   id             String          @id @default(uuid())
-  etat           String
+  etat           EtatCommande    @default(EN_COURS)
   dateCreation   DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   userId         String
-  user           User            @relation("UserOrders", fields: [userId], references: [id])
+  user           User            @relation("UserOrders", fields: [userId], references: [id], onDelete: Restrict)
   fournisseurId  String
-  fournisseur    Fournisseur     @relation("SupplierOrders", fields: [fournisseurId], references: [id])
+  fournisseur    Fournisseur     @relation("SupplierOrders", fields: [fournisseurId], references: [id], onDelete: Restrict)
+  entrepotId     String?
+  entrepot       Entrepot?       @relation(fields: [entrepotId], references: [id], onDelete: SetNull)
+  propositionId  String?         @unique
   commandesLigne CommandeLigne[]
+  fluxDeStocks   FluxDeStock[]
+
+  @@index([fournisseurId])
+  @@index([userId])
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  COMMANDE LIGNE (ORDER LINE)
+// ══════════════════════════════════════════════════════════════════════
 
 model CommandeLigne {
   id                String   @id @default(uuid())
   quantite          Int
-  prixUnitaireAchat Float?   @default(0)
+  prixUnitaireAchat Float    @default(0)
   commandeId        String
-  commande          Commande @relation(fields: [commandeId], references: [id])
+  commande          Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
   produitId         String
-  produit           Produit  @relation(fields: [produitId], references: [id])
+  produit           Produit  @relation(fields: [produitId], references: [id], onDelete: Restrict)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([commandeId])
+  @@index([produitId])
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  FLUX DE STOCK (STOCK MOVEMENT)
+//  Source de vérité : chaque mouvement met à jour StockEntrepot
+// ══════════════════════════════════════════════════════════════════════
 
 model FluxDeStock {
   id            String    @id @default(uuid())
   quantite      Int
   type          TypeStock
+  note          String?
   date          DateTime  @default(now())
   creerParId    String
-  creerPar      User      @relation("UserStockFlows", fields: [creerParId], references: [id])
+  creerPar      User      @relation("UserStockFlows", fields: [creerParId], references: [id], onDelete: Restrict)
   produitId     String
-  produit       Produit   @relation(fields: [produitId], references: [id])
+  produit       Produit   @relation(fields: [produitId], references: [id], onDelete: Cascade)
   entrepotId    String
-  entrepot      Entrepot  @relation(fields: [entrepotId], references: [id])
+  entrepot      Entrepot  @relation(fields: [entrepotId], references: [id], onDelete: Cascade)
+  entrepotLieId String?
+  commandeId    String?
+  commande      Commande? @relation(fields: [commandeId], references: [id], onDelete: SetNull)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  @@index([produitId, date])
+  @@index([entrepotId])
+  @@index([type])
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  PREDICTION (AI — historique conservé)
+//  Plusieurs prédictions par produit pour tracer l'évolution du modèle.
+//  La prédiction la plus récente est la prédiction "active".
+// ══════════════════════════════════════════════════════════════════════
+
 model Prediction {
-  id                    String   @id @default(uuid())
+  id                    String              @id @default(uuid())
   estimationSortieDate  DateTime
   quantiteRecommande    Int
   CMJ                   Float
-  methode               String   @default("hybrid")
-  fiabilite             Float    @default(0)
-  explication           String   @default("")  // Human-readable prediction explanation
-  tendance              String   @default("stable") // "increasing" | "decreasing" | "stable"
-  produitId             String   @unique        // Only ONE active prediction per product
-  produit               Produit  @relation(fields: [produitId], references: [id])
+  methode               String              @default("hybrid")
+  fiabilite             Float               @default(0)
+  explication           String              @default("")
+  tendance              String              @default("stable")
+  produitId             String
+  produit               Produit             @relation(fields: [produitId], references: [id], onDelete: Cascade)
   propositions          PropositionCommande[]
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([produitId, createdAt(sort: Desc)])
 }
 
-// ── Smart Replenishment: purchase order suggestions ──
+// ══════════════════════════════════════════════════════════════════════
+//  PROPOSITION COMMANDE (Smart Replenishment Suggestion)
+// ══════════════════════════════════════════════════════════════════════
+
 model PropositionCommande {
-  id               String      @id @default(uuid())
+  id               String            @id @default(uuid())
   quantiteProposee Int
-  dateProposition  DateTime    @default(now())
-  statut           String      @default("EN_ATTENTE") // EN_ATTENTE | ACCEPTEE | REFUSEE
-  scoreFournisseur Float?      @default(0)
+  dateProposition  DateTime          @default(now())
+  statut           StatutProposition @default(EN_ATTENTE)
+  scoreFournisseur Float             @default(0)
 
   produitId        String
-  produit          Produit     @relation(fields: [produitId], references: [id])
+  produit          Produit     @relation(fields: [produitId], references: [id], onDelete: Cascade)
 
   fournisseurId    String
-  fournisseur      Fournisseur @relation(fields: [fournisseurId], references: [id])
+  fournisseur      Fournisseur @relation(fields: [fournisseurId], references: [id], onDelete: Restrict)
 
   predictionId     String
-  prediction       Prediction  @relation(fields: [predictionId], references: [id])
+  prediction       Prediction  @relation(fields: [predictionId], references: [id], onDelete: Cascade)
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
+
+  @@index([produitId])
+  @@index([statut])
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  STOCK ENTREPÔT — SOURCE UNIQUE DE VÉRITÉ
+//  Quantité d'un produit dans un entrepôt spécifique.
+//  Stock total produit = SUM(quantite) GROUP BY produitId
+//  Stock total entrepôt = SUM(quantite) GROUP BY entrepotId
+// ══════════════════════════════════════════════════════════════════════
+
+model StockEntrepot {
+  id         String   @id @default(uuid())
+  quantite   Int      @default(0)
+
+  produitId  String
+  produit    Produit  @relation(fields: [produitId], references: [id], onDelete: Cascade)
+
+  entrepotId String
+  entrepot   Entrepot @relation(fields: [entrepotId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([produitId, entrepotId])
+  @@index([produitId])
+  @@index([entrepotId])
 }

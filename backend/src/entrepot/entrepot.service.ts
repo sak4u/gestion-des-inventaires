@@ -30,16 +30,29 @@ export class EntrepotService {
       where.capaciteMax = capaciteMax;
     }
 
-    return this.prisma.entrepot.findMany({
+    const entrepots = await this.prisma.entrepot.findMany({
       where,
-      include: { fluxDeStocks: { include: { produit: true } } },
+      include: {
+        stockEntrepots: { include: { produit: true } },
+        fluxDeStocks: { include: { produit: true } },
+      },
     });
+
+    // Enrichir chaque entrepôt avec son stock total calculé dynamiquement
+    return entrepots.map((e) => ({
+      ...e,
+      stockTotalEntrepot: e.stockEntrepots.reduce(
+        (sum, se) => sum + se.quantite,
+        0,
+      ),
+    }));
   }
 
   async findOne(id: string) {
     const entrepot = await this.prisma.entrepot.findUnique({
       where: { id },
       include: {
+        stockEntrepots: { include: { produit: true } },
         fluxDeStocks: {
           include: {
             produit: true,
@@ -51,7 +64,14 @@ export class EntrepotService {
     if (!entrepot) {
       throw new NotFoundException(`Entrepot with ID ${id} not found`);
     }
-    return entrepot;
+
+    return {
+      ...entrepot,
+      stockTotalEntrepot: entrepot.stockEntrepots.reduce(
+        (sum, se) => sum + se.quantite,
+        0,
+      ),
+    };
   }
 
   async update(id: string, updateEntrepotDto: UpdateEntrepotDto) {

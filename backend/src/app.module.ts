@@ -12,9 +12,10 @@ import { FournisseurProduitModule } from './fournisseur-produit/fournisseur-prod
 import { CommandeModule } from './commande/commande.module';
 import { CommandeLigneModule } from './commande-ligne/commande-ligne.module';
 import { FluxDeStockModule } from './flux-de-stock/flux-de-stock.module';
-import { PredictionModule } from './prediction/prediction.module';
+import { AiModule } from './ai/ai.module';
 import { PropositionCommandeModule } from './proposition-commande/proposition-commande.module';
 import { StockSchedulerModule } from './stock-scheduler/stock-scheduler.module';
+import { StockEntrepotModule } from './stock-entrepot/stock-entrepot.module';
 
 @Module({
   imports: [
@@ -29,9 +30,10 @@ import { StockSchedulerModule } from './stock-scheduler/stock-scheduler.module';
     CommandeModule,
     CommandeLigneModule,
     FluxDeStockModule,
-    PredictionModule,
+    AiModule,
     PropositionCommandeModule,
     StockSchedulerModule,
+    StockEntrepotModule,
   ],
   controllers: [AppController],
   providers: [AppService],

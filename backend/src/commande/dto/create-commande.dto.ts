@@ -1,9 +1,10 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsUUID, IsEnum } from 'class-validator';
+import { EtatCommande } from '@prisma/client';
 
 export class CreateCommandeDto {
-  @IsString()
-  @IsNotEmpty()
-  etat!: string;
+  @IsEnum(EtatCommande)
+  @IsOptional()
+  etat?: EtatCommande;
 
   @IsUUID()
   @IsNotEmpty()
@@ -12,4 +13,8 @@ export class CreateCommandeDto {
   @IsUUID()
   @IsNotEmpty()
   fournisseurId!: string;
+
+  @IsUUID()
+  @IsOptional()
+  entrepotId?: string;
 }

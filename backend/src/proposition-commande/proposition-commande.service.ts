@@ -3,26 +3,14 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
-  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PredictionService } from '../prediction/prediction.service';
+import { PredictionService } from '../ai/prediction/prediction.service';
+import { EtatCommande, StatutProposition } from '@prisma/client';
 
-// ═══════════════════════════════════════════════════════════════════
-//  SUPPLIER SCORING CONFIGURATION
-// ═══════════════════════════════════════════════════════════════════
-
-/** Weight for price in supplier scoring (lower price = better) */
 const WEIGHT_PRICE = 0.7;
-
-/** Weight for delivery time in supplier scoring (faster = better) */
 const WEIGHT_DELIVERY = 0.3;
 
-// ═══════════════════════════════════════════════════════════════════
-//  TYPES
-// ═══════════════════════════════════════════════════════════════════
-
-/** Supplier evaluation result after scoring */
 interface SupplierScore {
   fournisseurId: string;
   fournisseurNom: string;
@@ -41,32 +29,41 @@ export class PropositionCommandeService {
   ) {}
 
   // ─────────────────────────────────────────────────────────────────
-  //  SUPPLIER SELECTION & SCORING (Normalized)
+  //  HELPER: get total product stock (sum of all StockEntrepot)
   // ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Scores and ranks all suppliers for a given product.
-   *
-   * Scoring formula (Min-Max Normalization):
-   *   normalizedPrice    = prix / maxPrix         → range [0, 1]
-   *   normalizedDelivery = delai / maxDelai        → range [0, 1]
-   *   score = (WEIGHT_PRICE × normalizedPrice)
-   *         + (WEIGHT_DELIVERY × normalizedDelivery)
-   *
-   * Lower score = better supplier.
-   *
-   * Why normalize?
-   *   Without normalization, a price of 500 would dominate a delivery
-   *   time of 5, making the delivery weight meaningless. Normalization
-   *   ensures both dimensions contribute proportionally.
-   */
+  private async getStockTotal(produitId: string): Promise<number> {
+    const agg = await this.prisma.stockEntrepot.aggregate({
+      where: { produitId },
+      _sum: { quantite: true },
+    });
+    return agg._sum.quantite ?? 0;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  HELPER: get total stock in a specific warehouse (all products)
+  // ─────────────────────────────────────────────────────────────────
+
+  private async getEntrepotStockTotal(
+    entrepotId: string,
+    tx?: any,
+  ): Promise<number> {
+    const client = tx ?? this.prisma;
+    const agg = await client.stockEntrepot.aggregate({
+      where: { entrepotId },
+      _sum: { quantite: true },
+    });
+    return agg._sum.quantite ?? 0;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  SUPPLIER SCORING (Normalized)
+  // ─────────────────────────────────────────────────────────────────
+
   async selectBestSupplier(produitId: string): Promise<SupplierScore | null> {
-    // Fetch all suppliers for this product with minimal fields
     const fournisseurProduits = await this.prisma.fournisseurProduit.findMany({
       where: { produitId },
-      include: {
-        fournisseur: { select: { id: true, nom: true } },
-      },
+      include: { fournisseur: { select: { id: true, nom: true } } },
     });
 
     if (fournisseurProduits.length === 0) {
@@ -74,209 +71,121 @@ export class PropositionCommandeService {
       return null;
     }
 
-    // ── Compute normalization maximums ──
-    // Math.max(..., 1) prevents division by zero when all values are 0
-    const maxPrice = Math.max(
-      ...fournisseurProduits.map((fp) => fp.prixAchat ?? 0),
-      1, // floor to 1 to prevent division by zero
-    );
+    const maxPrice = Math.max(...fournisseurProduits.map((fp) => fp.prixAchat), 1);
+    const maxDelivery = Math.max(...fournisseurProduits.map((fp) => fp.delaiLivraison), 1);
 
-    const maxDelivery = Math.max(
-      ...fournisseurProduits.map((fp) => fp.delaiLivraison),
-      1, // floor to 1 to prevent division by zero
-    );
+    const scored: SupplierScore[] = fournisseurProduits.map((fp) => ({
+      fournisseurId: fp.fournisseurId,
+      fournisseurNom: fp.fournisseur.nom,
+      prixAchat: fp.prixAchat,
+      delaiLivraison: fp.delaiLivraison,
+      score: Math.round(
+        (WEIGHT_PRICE * (fp.prixAchat / maxPrice) +
+          WEIGHT_DELIVERY * (fp.delaiLivraison / maxDelivery)) *
+          1000,
+      ) / 1000,
+    }));
 
-    // ── Score each supplier ──
-    const scored: SupplierScore[] = fournisseurProduits.map((fp) => {
-      const normalizedPrice = (fp.prixAchat ?? 0) / maxPrice;
-      const normalizedDelivery = fp.delaiLivraison / maxDelivery;
-
-      const score =
-        WEIGHT_PRICE * normalizedPrice +
-        WEIGHT_DELIVERY * normalizedDelivery;
-
-      return {
-        fournisseurId: fp.fournisseurId,
-        fournisseurNom: fp.fournisseur.nom,
-        prixAchat: fp.prixAchat ?? 0,
-        delaiLivraison: fp.delaiLivraison,
-        score: Math.round(score * 1000) / 1000, // 3 decimal places
-      };
-    });
-
-    // Sort ascending: lowest score = best supplier
     scored.sort((a, b) => a.score - b.score);
-
-    this.logger.log(
-      `Best supplier for product ${produitId}: "${scored[0].fournisseurNom}" ` +
-        `(score=${scored[0].score}, price=${scored[0].prixAchat}, ` +
-        `delivery=${scored[0].delaiLivraison}d)`,
-    );
-
     return scored[0];
   }
 
   // ─────────────────────────────────────────────────────────────────
-  //  PROPOSITION GENERATION (Concurrency-Safe)
+  //  GENERATE PROPOSITION
   // ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Generates a purchase-order proposition for a product IF:
-   *   1. Current stock ≤ stockAlert threshold
-   *   2. No pending proposition already exists for this product
-   *
-   * Concurrency Safety:
-   *   The duplicate check + creation is wrapped in a SERIALIZABLE
-   *   transaction. This prevents race conditions where two concurrent
-   *   requests both pass the "no existing" check and both create
-   *   a proposition.
-   *
-   * Flow:
-   *   1. Validate product & stock level
-   *   2. Generate prediction (upserts, returns prediction ID)
-   *   3. Select best supplier via normalized scoring
-   *   4. Create PropositionCommande in a serializable transaction
-   */
   async generateProposition(produitId: string) {
-    // ── Step 1: Get the product and check stock level ──
     const produit = await this.prisma.produit.findUnique({
       where: { id: produitId },
-      select: { id: true, nom: true, quantite: true, stockAlert: true },
+      select: { id: true, nom: true, stockAlert: true },
     });
+    if (!produit) throw new NotFoundException(`Produit with ID ${produitId} not found`);
 
-    if (!produit) {
-      throw new NotFoundException(`Produit with ID ${produitId} not found`);
-    }
+    // ── Calcul dynamique du stock total réel ──
+    const stockTotal = await this.getStockTotal(produitId);
 
-    // Only generate if stock is at or below alert level
-    if (produit.quantite > produit.stockAlert) {
+    if (stockTotal > produit.stockAlert) {
       this.logger.debug(
-        `Product "${produit.nom}": stock (${produit.quantite}) > ` +
-          `alert (${produit.stockAlert}). Skipping.`,
+        `"${produit.nom}": stock (${stockTotal}) > alert (${produit.stockAlert}). Skipping.`,
       );
       return null;
     }
 
-    // ── Step 2: Generate a fresh prediction (upserts, returns ID) ──
-    const predictionResult =
-      await this.predictionService.generatePrediction(produitId);
+    const predictionResult = await this.predictionService.generatePrediction(produitId);
 
-    // Guard: if recommended qty is 0, no order needed
     if (predictionResult.quantiteRecommande <= 0) {
-      this.logger.debug(
-        `Product "${produit.nom}": recommended qty is 0. Skipping.`,
-      );
+      this.logger.debug(`"${produit.nom}": recommended qty is 0. Skipping.`);
       return null;
     }
 
-    // ── Step 3: Select the best supplier ──
     const bestSupplier = await this.selectBestSupplier(produitId);
     if (!bestSupplier) {
-      this.logger.warn(
-        `Cannot generate proposition for "${produit.nom}": ` +
-          `no supplier found. Add a FournisseurProduit entry first.`,
-      );
+      this.logger.warn(`Cannot generate proposition for "${produit.nom}": no supplier.`);
       return null;
     }
 
-    // ── Step 4: Concurrency-safe proposition creation ──
-    //   Using a Serializable transaction to prevent duplicate EN_ATTENTE
-    //   propositions. If two requests arrive simultaneously:
-    //   - First one: check passes → creates proposition
-    //   - Second one: check finds the first one → skips
     try {
       const proposition = await this.prisma.$transaction(
         async (tx) => {
-          // Check for existing pending proposition WITHIN the transaction
-          const existingPending =
-            await tx.propositionCommande.findFirst({
-              where: {
-                produitId,
-                statut: 'EN_ATTENTE',
-              },
-            });
-
+          const existingPending = await tx.propositionCommande.findFirst({
+            where: { produitId, statut: StatutProposition.EN_ATTENTE },
+          });
           if (existingPending) {
-            this.logger.debug(
-              `Pending proposition already exists for "${produit.nom}" ` +
-                `(ID: ${existingPending.id}). Skipping.`,
-            );
+            this.logger.debug(`Pending proposition already exists for "${produit.nom}". Skipping.`);
             return null;
           }
-
-          // Create the proposition
           return tx.propositionCommande.create({
             data: {
               produitId,
               fournisseurId: bestSupplier.fournisseurId,
-              predictionId: predictionResult.predictionId, // Direct ID link — no fragile findFirst!
+              predictionId: predictionResult.predictionId,
               quantiteProposee: predictionResult.quantiteRecommande,
               scoreFournisseur: bestSupplier.score,
-              statut: 'EN_ATTENTE',
+              statut: StatutProposition.EN_ATTENTE,
             },
-            include: {
-              produit: true,
-              fournisseur: true,
-              prediction: true,
-            },
+            include: { produit: true, fournisseur: true, prediction: true },
           });
         },
-        {
-          // Serializable isolation prevents phantom reads (race conditions)
-          isolationLevel: 'Serializable',
-        },
+        { isolationLevel: 'Serializable' },
       );
 
       if (!proposition) return null;
 
       this.logger.log(
-        `✅ Proposition created for "${produit.nom}": ` +
-          `qty=${predictionResult.quantiteRecommande}, ` +
-          `supplier="${bestSupplier.fournisseurNom}" ` +
-          `(score=${bestSupplier.score}, price=${bestSupplier.prixAchat})`,
+        `✅ Proposition created for "${produit.nom}": qty=${predictionResult.quantiteRecommande}, ` +
+          `supplier="${bestSupplier.fournisseurNom}" (score=${bestSupplier.score})`,
       );
-
       return proposition;
     } catch (error) {
-      // Handle Prisma serialization failure (concurrent transaction conflict)
-      if (
-        error instanceof Error &&
-        error.message.includes('could not serialize')
-      ) {
-        this.logger.warn(
-          `Concurrent proposition creation detected for "${produit.nom}". ` +
-            `Another transaction won. Skipping.`,
-        );
+      if (error instanceof Error && error.message.includes('could not serialize')) {
+        this.logger.warn(`Concurrent proposition creation for "${produit.nom}". Skipping.`);
         return null;
       }
-      throw error; // Re-throw unexpected errors
+      throw error;
     }
   }
 
   // ─────────────────────────────────────────────────────────────────
-  //  BATCH CHECK — All Products
+  //  BATCH CHECK
   // ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Scans ALL products, generates propositions for those
-   * whose stock is at or below the alert threshold.
-   *
-   * Optimization: Pre-filters products at the DB level using
-   * a raw query to compare quantite <= stockAlert, avoiding
-   * unnecessary processing of well-stocked products.
-   */
   async checkAllProducts(): Promise<{
     checked: number;
     propositionsCreated: number;
     skipped: number;
     errors: string[];
   }> {
-    // Optimization: only fetch products where stock <= alert threshold
-    // Prisma doesn't support field-to-field comparisons in where clauses,
-    // so we use $queryRawUnsafe for this optimization.
+    // Utilise la SOMME des StockEntrepot pour comparer avec stockAlert
     const lowStockProducts = await this.prisma.$queryRaw<
       { id: string; nom: string }[]
-    >`SELECT id, nom FROM "Produit" WHERE quantite <= "stockAlert"`;
+    >`
+      SELECT p.id, p.nom
+      FROM "Produit" p
+      WHERE COALESCE(
+        (SELECT SUM(se.quantite) FROM "StockEntrepot" se WHERE se."produitId" = p.id),
+        0
+      ) <= p."stockAlert"
+    `;
 
     let propositionsCreated = 0;
     let skipped = 0;
@@ -285,173 +194,157 @@ export class PropositionCommandeService {
     for (const product of lowStockProducts) {
       try {
         const result = await this.generateProposition(product.id);
-        if (result) {
-          propositionsCreated++;
-        } else {
-          skipped++;
-        }
+        result ? propositionsCreated++ : skipped++;
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         errors.push(`"${product.nom}": ${msg}`);
-        this.logger.warn(
-          `Failed to process product "${product.nom}": ${msg}`,
-        );
+        this.logger.warn(`Failed to process "${product.nom}": ${msg}`);
       }
     }
 
     this.logger.log(
-      `Batch check complete: ${lowStockProducts.length} low-stock products found, ` +
-        `${propositionsCreated} propositions created, ${skipped} skipped`,
+      `Batch: ${lowStockProducts.length} low-stock, ${propositionsCreated} created, ${skipped} skipped`,
     );
 
-    return {
-      checked: lowStockProducts.length,
-      propositionsCreated,
-      skipped,
-      errors,
-    };
+    return { checked: lowStockProducts.length, propositionsCreated, skipped, errors };
   }
 
   // ─────────────────────────────────────────────────────────────────
-  //  CRUD / QUERIES
+  //  CRUD
   // ─────────────────────────────────────────────────────────────────
 
-  /** List all propositions with full relations */
   async findAll() {
     return this.prisma.propositionCommande.findMany({
-      include: {
-        produit: true,
-        fournisseur: true,
-        prediction: true,
-      },
+      include: { produit: true, fournisseur: true, prediction: true },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  /** List only pending (EN_ATTENTE) propositions */
   async findPending() {
     return this.prisma.propositionCommande.findMany({
-      where: { statut: 'EN_ATTENTE' },
-      include: {
-        produit: true,
-        fournisseur: true,
-        prediction: true,
-      },
+      where: { statut: StatutProposition.EN_ATTENTE },
+      include: { produit: true, fournisseur: true, prediction: true },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  /** Get a single proposition by ID */
   async findOne(id: string) {
     const proposition = await this.prisma.propositionCommande.findUnique({
       where: { id },
-      include: {
-        produit: true,
-        fournisseur: true,
-        prediction: true,
-      },
+      include: { produit: true, fournisseur: true, prediction: true },
     });
-    if (!proposition) {
-      throw new NotFoundException(
-        `PropositionCommande with ID ${id} not found`,
-      );
-    }
+    if (!proposition) throw new NotFoundException(`PropositionCommande with ID ${id} not found`);
     return proposition;
   }
 
   // ─────────────────────────────────────────────────────────────────
-  //  ACCEPT — Convert proposition into a real Commande
+  //  ACCEPT — avec entrepôt cible obligatoire
+  //  Capacity validated via dynamic SUM(StockEntrepot)
   // ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Accepts a proposition and converts it into a real purchase order.
-   *
-   * Transaction flow:
-   *   1. Validate state — only EN_ATTENTE can be accepted
-   *   2. Fetch supplier price INSIDE the transaction (data consistency)
-   *   3. Update proposition statut → "ACCEPTEE"
-   *   4. Create a Commande (etat = "En cours")
-   *   5. Create a CommandeLigne with correct supplier price
-   *
-   * All steps are atomic — if any fails, nothing is committed.
-   *
-   * @param id     Proposition ID
-   * @param userId The user accepting the proposition (from JWT token)
-   */
-  async accept(id: string, userId: string) {
-    // Validate: proposition must exist and be in pending state
+  async accept(id: string, userId: string, entrepotId: string) {
     const proposition = await this.findOne(id);
 
-    if (proposition.statut !== 'EN_ATTENTE') {
+    if (proposition.statut !== StatutProposition.EN_ATTENTE) {
       throw new BadRequestException(
-        `Proposition is already "${proposition.statut}". ` +
-          `Only EN_ATTENTE propositions can be accepted.`,
+        `Proposition is already "${proposition.statut}". Only EN_ATTENTE can be accepted.`,
       );
     }
-
     if (!userId) {
-      throw new BadRequestException(
-        'User ID is required to accept a proposition.',
-      );
+      throw new BadRequestException('User ID is required.');
     }
 
-    // ── Execute everything in a single transaction ──
-    const result = await this.prisma.$transaction(async (tx) => {
-      // 1) Fetch supplier's price for this product INSIDE the transaction
-      //    This ensures we use the price that was valid at acceptance time
-      const fournisseurProduit = await tx.fournisseurProduit.findFirst({
-        where: {
-          produitId: proposition.produitId,
-          fournisseurId: proposition.fournisseurId,
-        },
-        select: { prixAchat: true },
-      });
+    // Valider l'entrepôt
+    const entrepot = await this.prisma.entrepot.findUnique({
+      where: { id: entrepotId },
+      select: { id: true, nom: true, capaciteMax: true },
+    });
+    if (!entrepot) {
+      throw new NotFoundException(`Entrepôt avec ID ${entrepotId} introuvable.`);
+    }
 
-      const prixAchat = fournisseurProduit?.prixAchat ?? 0;
-
-      if (prixAchat === 0) {
-        this.logger.warn(
-          `Supplier price is 0 for proposition ${id}. ` +
-            `This may indicate missing FournisseurProduit data.`,
+    // Vérifier capacité dynamiquement
+    if (entrepot.capaciteMax != null) {
+      const currentStock = await this.getEntrepotStockTotal(entrepotId);
+      if (currentStock + proposition.quantiteProposee > entrepot.capaciteMax) {
+        throw new BadRequestException(
+          `Capacité de l'entrepôt "${entrepot.nom}" insuffisante. ` +
+            `Capacité max: ${entrepot.capaciteMax}, ` +
+            `stock actuel: ${currentStock}, ` +
+            `quantité à recevoir: ${proposition.quantiteProposee}`,
         );
       }
+    }
 
-      // 2) Update proposition status
-      const updatedProposition = await tx.propositionCommande.update({
-        where: { id },
-        data: { statut: 'ACCEPTEE' },
-      });
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const fournisseurProduit = await tx.fournisseurProduit.findFirst({
+          where: { produitId: proposition.produitId, fournisseurId: proposition.fournisseurId },
+          select: { prixAchat: true },
+        });
+        const prixAchat = fournisseurProduit?.prixAchat ?? 0;
 
-      // 3) Create the real Commande (purchase order)
-      const commande = await tx.commande.create({
-        data: {
-          etat: 'En cours',
-          userId,
-          fournisseurId: proposition.fournisseurId,
-        },
-      });
+        // 1) Mettre à jour la proposition
+        const updatedProposition = await tx.propositionCommande.update({
+          where: { id },
+          data: { statut: StatutProposition.ACCEPTEE },
+        });
 
-      // 4) Create the CommandeLigne (order line)
-      const commandeLigne = await tx.commandeLigne.create({
-        data: {
-          commandeId: commande.id,
-          produitId: proposition.produitId,
-          quantite: proposition.quantiteProposee,
-          prixUnitaireAchat: prixAchat,
-        },
-      });
+        // 2) Créer la commande avec lien entrepôt et proposition
+        const commande = await tx.commande.create({
+          data: {
+            etat: EtatCommande.EN_COURS,
+            userId,
+            fournisseurId: proposition.fournisseurId,
+            entrepotId,
+            propositionId: proposition.id,
+          },
+        });
 
-      return {
-        proposition: updatedProposition,
-        commande,
-        commandeLigne,
-        prixUnitaireAchat: prixAchat,
-      };
-    });
+        // 3) Créer la ligne de commande
+        const commandeLigne = await tx.commandeLigne.create({
+          data: {
+            commandeId: commande.id,
+            produitId: proposition.produitId,
+            quantite: proposition.quantiteProposee,
+            prixUnitaireAchat: prixAchat,
+          },
+        });
+
+        // 4) Créer un flux d'achat dans l'entrepôt cible (matérialise la réception)
+        await tx.fluxDeStock.create({
+          data: {
+            quantite: proposition.quantiteProposee,
+            type: 'achat',
+            note: `Réception commande ${commande.id} (proposition ${proposition.id})`,
+            produitId: proposition.produitId,
+            entrepotId,
+            creerParId: userId,
+            commandeId: commande.id,
+          },
+        });
+
+        // 5) Mettre à jour StockEntrepot destination
+        await tx.stockEntrepot.upsert({
+          where: {
+            produitId_entrepotId: { produitId: proposition.produitId, entrepotId },
+          },
+          create: {
+            produitId: proposition.produitId,
+            entrepotId,
+            quantite: proposition.quantiteProposee,
+          },
+          update: { quantite: { increment: proposition.quantiteProposee } },
+        });
+
+        return { proposition: updatedProposition, commande, commandeLigne, prixUnitaireAchat: prixAchat, entrepot };
+      },
+      { isolationLevel: 'Serializable' },
+    );
 
     this.logger.log(
-      `✅ Proposition ${id} accepted → Commande ${result.commande.id} created ` +
-        `(${result.commandeLigne.quantite} units × ${result.prixUnitaireAchat} DA)`,
+      `✅ Proposition ${id} accepted → Commande ${result.commande.id} ` +
+        `(${result.commandeLigne.quantite} units → entrepôt "${result.entrepot.nom}")`,
     );
 
     return result;
@@ -461,32 +354,19 @@ export class PropositionCommandeService {
   //  REJECT
   // ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Rejects a pending proposition. The product remains flagged for
-   * potential re-evaluation in the next scheduler cycle.
-   */
   async reject(id: string) {
     const proposition = await this.findOne(id);
-
-    if (proposition.statut !== 'EN_ATTENTE') {
+    if (proposition.statut !== StatutProposition.EN_ATTENTE) {
       throw new BadRequestException(
-        `Proposition is already "${proposition.statut}". ` +
-          `Only EN_ATTENTE propositions can be rejected.`,
+        `Proposition is already "${proposition.statut}". Only EN_ATTENTE can be rejected.`,
       );
     }
-
     const updated = await this.prisma.propositionCommande.update({
       where: { id },
-      data: { statut: 'REFUSEE' },
-      include: {
-        produit: true,
-        fournisseur: true,
-      },
+      data: { statut: StatutProposition.REFUSEE },
+      include: { produit: true, fournisseur: true },
     });
-
-    this.logger.log(
-      `❌ Proposition ${id} rejected for product "${updated.produit.nom}"`,
-    );
+    this.logger.log(`❌ Proposition ${id} rejected for "${updated.produit.nom}"`);
     return updated;
   }
 }

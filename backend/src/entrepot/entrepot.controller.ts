@@ -14,8 +14,11 @@ import { CreateEntrepotDto } from './dto/create-entrepot.dto';
 import { UpdateEntrepotDto } from './dto/update-entrepot.dto';
 import { GetEntrepotsFilterDto } from './dto/get-entrepots-filter.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMINISTRATEUR')
 @Controller('entrepots')
 export class EntrepotController {
   constructor(private readonly entrepotService: EntrepotService) {}

@@ -13,5 +13,5 @@ export class RegisterDto {
 
   @IsString()
   @IsNotEmpty()
-  roleId!: string;
+  roleName!: string;
 }

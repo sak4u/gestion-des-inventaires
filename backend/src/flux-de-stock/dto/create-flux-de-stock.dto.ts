@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 import { TypeStock } from '@prisma/client';
 
 export class CreateFluxDeStockDto {
@@ -21,4 +21,12 @@ export class CreateFluxDeStockDto {
   @IsUUID()
   @IsNotEmpty()
   entrepotId!: string;
+
+  @IsString()
+  @IsOptional()
+  note?: string;
+
+  @IsUUID()
+  @IsOptional()
+  commandeId?: string;
 }

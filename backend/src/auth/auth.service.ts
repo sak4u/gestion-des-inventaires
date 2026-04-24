@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, OnModuleInit, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -8,24 +8,49 @@ import type { RegisterDto } from './dto/register.dto';
 import type { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private mailService: MailService,
   ) {}
 
+  async onModuleInit() {
+    // Si la table Role est 100% vide, on génère les rôles initiaux sinon on crier les role manquant 
+    const count = await this.prisma.role.count();
+  if (count < 4) {
+            const roles = [
+              { name: 'ADMINISTRATEUR', description: 'Administrateur principal' },
+              { name: 'GESTIONNAIRE_STOCK', description: 'Gestionnaire de stock' },
+              { name: 'RESPONSABLE_APPRO', description: "Responsable d'approvisionnement " },
+            ];
+
+            for (const role of roles) {
+              await this.prisma.role.upsert({
+                where: { name: role.name },
+                update: {},
+                create: {
+                  name: role.name,
+                  description: role.description,
+                },
+              });
+            }
+            console.log(
+              'Rôles initiaux créés ou vérifiés :',
+              roles.map(role => role.name).join(', ')
+            );
+   }
+  }
+
   async register(data: RegisterDto) {
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    let role = await this.prisma.role.findUnique({
-      where: { name: 'USER' },
+    // On cherche obligatoirement le rôle par son nom (passé dans le Formulaire)
+    const role = await this.prisma.role.findUnique({
+      where: { name: data.roleName },
     });
-
     if (!role) {
-      role = await this.prisma.role.create({
-        data: { name: 'USER', description: 'Standard user role' },
-      });
+      throw new BadRequestException(`Le rôle '${data.roleName}' est invalide ou inexistant.`);
     }
 
     return this.prisma.user.create({

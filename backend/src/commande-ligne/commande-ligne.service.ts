@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCommandeLigneDto } from './dto/create-commande-ligne.dto';
 import { UpdateCommandeLigneDto } from './dto/update-commande-ligne.dto';
+import { EtatCommande } from '@prisma/client';
 
 @Injectable()
 export class CommandeLigneService {
@@ -16,8 +17,9 @@ export class CommandeLigneService {
       throw new NotFoundException(`Commande with ID ${createCommandeLigneDto.commandeId} not found`);
     }
 
-    if (commande.etat === 'Fermée' || commande.etat === 'Validée') {
-      throw new BadRequestException(`Impossible d'ajouter une ligne : la commande est déjà ${commande.etat.toLowerCase()}`);
+    const closedStates: EtatCommande[] = [EtatCommande.FERMEE, EtatCommande.LIVREE, EtatCommande.ANNULEE];
+    if (closedStates.includes(commande.etat)) {
+      throw new BadRequestException(`Impossible d'ajouter une ligne : la commande est déjà ${commande.etat}`);
     }
 
     return this.prisma.commandeLigne.create({

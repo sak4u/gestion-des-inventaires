@@ -12,8 +12,11 @@ import { ProduitService } from './produit.service';
 import { CreateProduitDto } from './dto/create-produit.dto';
 import { UpdateProduitDto } from './dto/update-produit.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMINISTRATEUR', 'GESTIONNAIRE_STOCK') // Seuls les administrateurs et gestionnaires de stock peuvent gérer les produits
 @Controller('produits')
 export class ProduitController {
   constructor(private readonly produitService: ProduitService) {}

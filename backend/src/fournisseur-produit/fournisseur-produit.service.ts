@@ -8,10 +8,20 @@ export class FournisseurProduitService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createFournisseurProduitDto: CreateFournisseurProduitDto) {
-    return this.prisma.fournisseurProduit.create({
+    const fp = await this.prisma.fournisseurProduit.create({
       data: createFournisseurProduitDto,
       include: { fournisseur: true, produit: true },
     });
+
+    if (fp.produit && fp.produit.prixActuel === 0 && fp.prixAchat > 0) {
+      await this.prisma.produit.update({
+        where: { id: fp.produitId },
+        data: { prixActuel: fp.prixAchat },
+      });
+      fp.produit.prixActuel = fp.prixAchat;
+    }
+
+    return fp;
   }
 
   async findAll() {
@@ -36,11 +46,21 @@ export class FournisseurProduitService {
     updateFournisseurProduitDto: UpdateFournisseurProduitDto,
   ) {
     try {
-      return await this.prisma.fournisseurProduit.update({
+      const fp = await this.prisma.fournisseurProduit.update({
         where: { id },
         data: updateFournisseurProduitDto,
         include: { fournisseur: true, produit: true },
       });
+
+      if (fp.produit && fp.produit.prixActuel === 0 && fp.prixAchat > 0) {
+        await this.prisma.produit.update({
+          where: { id: fp.produitId },
+          data: { prixActuel: fp.prixAchat },
+        });
+        fp.produit.prixActuel = fp.prixAchat;
+      }
+
+      return fp;
     } catch {
       throw new NotFoundException(`FournisseurProduit with ID ${id} not found`);
     }

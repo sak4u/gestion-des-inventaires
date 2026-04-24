@@ -13,18 +13,26 @@ export class ProduitService {
       include: {
         fournisseurProduits: { include: { fournisseur: true } },
         predictions: true,
+        stockEntrepots: { include: { entrepot: true } },
       },
     });
   }
 
   async findAll() {
-    return this.prisma.produit.findMany({
+    const produits = await this.prisma.produit.findMany({
       include: {
         fournisseurProduits: { include: { fournisseur: true } },
         commandesLigne: true,
         predictions: true,
+        stockEntrepots: { include: { entrepot: true } },
       },
     });
+
+    // Enrichir chaque produit avec son stock total calculé
+    return produits.map((p) => ({
+      ...p,
+      stockTotal: p.stockEntrepots.reduce((sum, se) => sum + se.quantite, 0),
+    }));
   }
 
   async findOne(id: string) {
@@ -34,18 +42,23 @@ export class ProduitService {
         fournisseurProduits: { include: { fournisseur: true } },
         commandesLigne: { include: { commande: true } },
         predictions: true,
+        stockEntrepots: { include: { entrepot: true } },
         fluxDeStocks: {
           include: {
             entrepot: true,
             creerPar: { select: { id: true, name: true, email: true } },
           },
+          orderBy: { date: 'desc' },
         },
       },
     });
     if (!produit) {
       throw new NotFoundException(`Produit with ID ${id} not found`);
     }
-    return produit;
+    return {
+      ...produit,
+      stockTotal: produit.stockEntrepots.reduce((sum, se) => sum + se.quantite, 0),
+    };
   }
 
   async update(id: string, updateProduitDto: UpdateProduitDto) {
@@ -56,6 +69,7 @@ export class ProduitService {
         include: {
           fournisseurProduits: { include: { fournisseur: true } },
           predictions: true,
+          stockEntrepots: { include: { entrepot: true } },
         },
       });
     } catch {

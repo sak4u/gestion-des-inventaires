@@ -12,8 +12,11 @@ import { FournisseurProduitService } from './fournisseur-produit.service';
 import { CreateFournisseurProduitDto } from './dto/create-fournisseur-produit.dto';
 import { UpdateFournisseurProduitDto } from './dto/update-fournisseur-produit.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMINISTRATEUR', 'RESPONSABLE_APPRO') // Seuls les administrateurs et responsables d'approvisionnement peuvent gérer les associations fournisseur-produit
 @Controller('fournisseur-produits')
 export class FournisseurProduitController {
   constructor(

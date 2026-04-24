@@ -12,8 +12,11 @@ import { CommandeService } from './commande.service';
 import { CreateCommandeDto } from './dto/create-commande.dto';
 import { UpdateCommandeDto } from './dto/update-commande.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('RESPONSABLE_APPRO', 'ADMINISTRATEUR')
 @Controller('commandes')
 export class CommandeController {
   constructor(private readonly commandeService: CommandeService) {}
