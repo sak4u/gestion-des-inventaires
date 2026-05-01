@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ProduitService } from './produit.service';
 import { CreateProduitDto } from './dto/create-produit.dto';
@@ -29,6 +30,16 @@ export class ProduitController {
   @Get()
   findAll() {
     return this.produitService.findAll();
+  }
+
+  @Get('by-code-barre/lookup')
+  findOneByCodeBare(@Query('codeBare') codeBare: string) {
+    return this.produitService.findOneByCodeBare(codeBare);
+  }
+
+  @Get('by-code-barre/qrcode')
+  generateQrCodeFromCodeBare(@Query('codeBare') codeBare: string) {
+    return this.produitService.generateQrCodeFromCodeBare(codeBare);
   }
 
   @Get(':id')

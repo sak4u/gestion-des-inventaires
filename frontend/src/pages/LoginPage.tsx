@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthLeftPanel } from '../components/AuthLeftPanel';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
@@ -18,8 +20,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email, password });
-      localStorage.setItem('access_token', res.data.access_token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      login(res.data.access_token, res.data.user);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Email ou mot de passe incorrect.');

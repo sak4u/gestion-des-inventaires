@@ -74,8 +74,14 @@ export class FluxDeStockService {
   // ─────────────────────────────────────────────────────────────────
 
   async create(createFluxDeStockDto: CreateFluxDeStockDto) {
-    if (createFluxDeStockDto.type === 'achat' && !createFluxDeStockDto.commandeId) {
-      throw new BadRequestException("Un flux d'achat doit obligatoirement être lié à une commande.");
+    // ── Flux 'achat' are generated automatically when a Commande ACHAT
+    //    transitions to LIVREE. Manual creation is forbidden to prevent
+    //    quantity mismatches between the order and the stock reception.
+    if (createFluxDeStockDto.type === 'achat') {
+      throw new BadRequestException(
+        "Les flux d'achat sont générés automatiquement lors de la livraison d'une commande. " +
+        "Passez la commande à l'état LIVREE pour déclencher la réception de stock.",
+      );
     }
 
     const fluxResult = await this.prisma.$transaction(

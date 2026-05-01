@@ -184,4 +184,76 @@ export class StockEntrepotService {
 
     return stock;
   }
+
+  async exportCsv(filters?: { produitId?: string; entrepotId?: string }) {
+    const rows = await this.prisma.stockEntrepot.findMany({
+      where: {
+        produitId: filters?.produitId || undefined,
+        entrepotId: filters?.entrepotId || undefined,
+      },
+      include: {
+        produit: {
+          select: {
+            id: true,
+            nom: true,
+            codeBare: true,
+            category: true,
+            stockAlert: true,
+            prixActuel: true,
+          },
+        },
+        entrepot: {
+          select: {
+            id: true,
+            nom: true,
+            adresse: true,
+          },
+        },
+      },
+      orderBy: [{ entrepot: { nom: 'asc' } }, { produit: { nom: 'asc' } }],
+    });
+
+    const escapeCsv = (value: unknown): string => {
+      if (value === null || value === undefined) return '';
+      const text = String(value);
+      if (/[",;\n]/.test(text)) {
+        return `"${text.replace(/"/g, '""')}"`;
+      }
+      return text;
+    };
+
+    const header = [
+      'produit_id',
+      'produit_nom',
+      'code_barre',
+      'categorie',
+      'stock_alerte',
+      'prix_actuel',
+      'entrepot_id',
+      'entrepot_nom',
+      'entrepot_adresse',
+      'quantite',
+      'updated_at',
+    ];
+
+    const lines = rows.map((row) =>
+      [
+        row.produit.id,
+        row.produit.nom,
+        row.produit.codeBare,
+        row.produit.category,
+        row.produit.stockAlert,
+        row.produit.prixActuel ?? '',
+        row.entrepot.id,
+        row.entrepot.nom,
+        row.entrepot.adresse ?? '',
+        row.quantite,
+        row.updatedAt.toISOString(),
+      ]
+        .map(escapeCsv)
+        .join(';'),
+    );
+
+    return [header.join(';'), ...lines].join('\n');
+  }
 }

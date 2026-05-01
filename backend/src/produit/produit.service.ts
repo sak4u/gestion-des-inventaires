@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProduitDto } from './dto/create-produit.dto';
 import { UpdateProduitDto } from './dto/update-produit.dto';
+import QRCode from 'qrcode';
 
 @Injectable()
 export class ProduitService {
@@ -58,6 +59,49 @@ export class ProduitService {
     return {
       ...produit,
       stockTotal: produit.stockEntrepots.reduce((sum, se) => sum + se.quantite, 0),
+    };
+  }
+
+  async findOneByCodeBare(codeBare: string) {
+    const normalizedCodeBare = codeBare?.trim();
+    if (!normalizedCodeBare) {
+      throw new BadRequestException('Query param "codeBare" is required');
+    }
+    const produit = await this.prisma.produit.findFirst({
+      where: { codeBare: normalizedCodeBare },
+      include: {
+        fournisseurProduits: { include: { fournisseur: true } },
+        commandesLigne: { include: { commande: true } },
+        predictions: true,
+        stockEntrepots: { include: { entrepot: true } },
+      },
+    });
+
+    if (!produit) {
+      throw new NotFoundException(
+        `Produit with codeBare ${normalizedCodeBare} not found`,
+      );
+    }
+
+    return {
+      ...produit,
+      stockTotal: produit.stockEntrepots.reduce((sum, se) => sum + se.quantite, 0),
+    };
+  }
+
+  async generateQrCodeFromCodeBare(codeBare: string) {
+    const produit = await this.findOneByCodeBare(codeBare);
+    const qrCodeDataUrl = await QRCode.toDataURL(produit.codeBare, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 320,
+    });
+
+    return {
+      produitId: produit.id,
+      codeBare: produit.codeBare,
+      produitNom: produit.nom,
+      qrCodeDataUrl,
     };
   }
 

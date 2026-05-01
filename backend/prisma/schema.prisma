@@ -27,6 +27,11 @@ enum EtatCommande {
   ANNULEE
 }
 
+enum TypeCommande {
+  ACHAT
+  VENTE
+}
+
 enum StatutProposition {
   EN_ATTENTE
   ACCEPTEE
@@ -140,13 +145,14 @@ model FournisseurProduit {
 
 model Commande {
   id             String          @id @default(uuid())
+  type           TypeCommande    @default(ACHAT)
   etat           EtatCommande    @default(EN_COURS)
   dateCreation   DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   userId         String
   user           User            @relation("UserOrders", fields: [userId], references: [id], onDelete: Restrict)
-  fournisseurId  String
-  fournisseur    Fournisseur     @relation("SupplierOrders", fields: [fournisseurId], references: [id], onDelete: Restrict)
+  fournisseurId  String?
+  fournisseur    Fournisseur?    @relation("SupplierOrders", fields: [fournisseurId], references: [id], onDelete: Restrict)
   entrepotId     String?
   entrepot       Entrepot?       @relation(fields: [entrepotId], references: [id], onDelete: SetNull)
   propositionId  String?         @unique
@@ -155,6 +161,7 @@ model Commande {
 
   @@index([fournisseurId])
   @@index([userId])
+  @@index([type])
 }
 
 // ══════════════════════════════════════════════════════════════════════

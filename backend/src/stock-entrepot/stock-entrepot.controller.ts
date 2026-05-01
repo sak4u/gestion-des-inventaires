@@ -1,8 +1,9 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res, UseGuards } from '@nestjs/common';
 import { StockEntrepotService } from './stock-entrepot.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import type { Response } from 'express';
 
 /**
  * StockEntrepotController
@@ -29,6 +30,19 @@ export class StockEntrepotController {
   @Get()
   findAll() {
     return this.stockEntrepotService.findAll();
+  }
+
+  @Get('export/csv')
+  async exportCsv(
+    @Res() res: Response,
+    @Query('produitId') produitId?: string,
+    @Query('entrepotId') entrepotId?: string,
+  ) {
+    const csv = await this.stockEntrepotService.exportCsv({ produitId, entrepotId });
+    const filename = `stock-entrepot-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
   }
 
   /**

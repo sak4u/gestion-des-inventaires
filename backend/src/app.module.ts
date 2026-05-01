@@ -16,6 +16,7 @@ import { AiModule } from './ai/ai.module';
 import { PropositionCommandeModule } from './proposition-commande/proposition-commande.module';
 import { StockSchedulerModule } from './stock-scheduler/stock-scheduler.module';
 import { StockEntrepotModule } from './stock-entrepot/stock-entrepot.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { StockEntrepotModule } from './stock-entrepot/stock-entrepot.module';
     PropositionCommandeModule,
     StockSchedulerModule,
     StockEntrepotModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
