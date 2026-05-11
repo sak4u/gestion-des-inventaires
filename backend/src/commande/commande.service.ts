@@ -44,7 +44,7 @@ export class CommandeService {
   //  Only triggered when a ACHAT commande transitions to LIVREE.
   // ─────────────────────────────────────────────────────────────────
 
-  private async generateFluxReception(
+  private async generateFluxStock(
     commandeId: string,
     tx: Prisma.TransactionClient,
   ): Promise<void> {
@@ -59,20 +59,43 @@ export class CommandeService {
     if (!commande) throw new NotFoundException(`Commande ${commandeId} introuvable`);
     if (!commande.entrepotId) {
       throw new BadRequestException(
-        "Impossible de livrer : aucun entrepôt de réception défini sur la commande.",
+        `Impossible de valider : aucun entrepôt ${commande.type === 'ACHAT' ? 'réception' : 'source'} défini sur la commande.`,
       );
     }
     if (commande.commandesLigne.length === 0) {
       throw new BadRequestException(
-        "Impossible de livrer : la commande ne contient aucune ligne.",
+        "Impossible de valider : la commande ne contient aucune ligne.",
       );
     }
 
-    for (const ligne of commande.commandesLigne) {
-      const delta = ligne.quantite;
+    const isAchat = commande.type === TypeCommande.ACHAT;
 
-      // ── Validate warehouse capacity ──
-      if (commande.entrepot?.capaciteMax != null) {
+    for (const ligne of commande.commandesLigne) {
+      // Delta is positive for ACHAT (reception) and negative for VENTE (expedition)
+      const delta = isAchat ? ligne.quantite : -ligne.quantite;
+
+      // ── Fetch current localized stock ──
+      const currentLocal = await tx.stockEntrepot.findUnique({
+        where: {
+          produitId_entrepotId: {
+            produitId: ligne.produitId,
+            entrepotId: commande.entrepotId!,
+          },
+        },
+        select: { quantite: true },
+      });
+      const localStock = currentLocal?.quantite ?? 0;
+
+      // Validate no negative stock for VENTE
+      if (!isAchat && localStock + delta < 0) {
+        throw new BadRequestException(
+          `Stock insuffisant dans l'entrepôt pour "${ligne.produit.nom}". ` +
+          `Disponible: ${localStock}, Demandé: ${Math.abs(delta)}`
+        );
+      }
+
+      // ── Validate warehouse capacity for ACHAT ──
+      if (isAchat && commande.entrepot?.capaciteMax != null) {
         const agg = await tx.stockEntrepot.aggregate({
           where: { entrepotId: commande.entrepotId! },
           _sum: { quantite: true },
@@ -102,42 +125,41 @@ export class CommandeService {
         update: { quantite: { increment: delta } },
       });
 
-      // ── CUMP recalculation ──
-      const produit = await tx.produit.findUnique({
-        where: { id: ligne.produitId },
-        select: { prixActuel: true },
-      });
-      const prixAchat = ligne.prixUnitaireAchat;
-
-      if (prixAchat > 0 && produit) {
-        const aggGlobal = await tx.stockEntrepot.aggregate({
-          where: { produitId: ligne.produitId },
-          _sum: { quantite: true },
-        });
-        const globalStockAfter = aggGlobal._sum.quantite ?? 0;
-        const globalStockBefore = Math.max(0, globalStockAfter - delta);
-        const totalValeurAncienne = globalStockBefore * (produit.prixActuel || 0);
-        const valeurEntrante = delta * prixAchat;
-        const newPrixActuel =
-          globalStockAfter > 0
-            ? (totalValeurAncienne + valeurEntrante) / globalStockAfter
-            : prixAchat;
-
-        await tx.produit.update({
+      // ── CUMP recalculation (Only for ACHAT) ──
+      if (isAchat) {
+        const produit = await tx.produit.findUnique({
           where: { id: ligne.produitId },
-          data: { prixActuel: newPrixActuel },
+          select: { prixAchatMoyen: true },
         });
-        this.logger.log(
-          `CUMP produit ${ligne.produitId}: ancien=${produit.prixActuel} → nouveau=${newPrixActuel.toFixed(4)}`,
-        );
+        const prixAchat = (ligne as any).prixUnitaire;
+
+        if (prixAchat > 0 && produit) {
+          const aggGlobal = await tx.stockEntrepot.aggregate({
+            where: { produitId: ligne.produitId },
+            _sum: { quantite: true },
+          });
+          const globalStockAfter = aggGlobal._sum.quantite ?? 0;
+          const globalStockBefore = Math.max(0, globalStockAfter - delta);
+          const totalValeurAncienne = globalStockBefore * ((produit as any).prixAchatMoyen || 0);
+          const valeurEntrante = delta * prixAchat;
+          const newPrixAchatMoyen =
+            globalStockAfter > 0
+              ? (totalValeurAncienne + valeurEntrante) / globalStockAfter
+              : prixAchat;
+
+          await tx.produit.update({
+            where: { id: ligne.produitId },
+            data: { prixAchatMoyen: newPrixAchatMoyen },
+          });
+        }
       }
 
-      // ── Create FluxDeStock achat ──
+      // ── Create FluxDeStock (achat or vente) ──
       await tx.fluxDeStock.create({
         data: {
           quantite: ligne.quantite,
-          type: 'achat',
-          note: `Réception automatique — Commande #${commandeId}`,
+          type: isAchat ? 'achat' : 'vente',
+          note: `${isAchat ? 'Réception' : 'Expédition'} automatique — Commande #${commandeId}`,
           produitId: ligne.produitId,
           entrepotId: commande.entrepotId!,
           creerParId: commande.userId,
@@ -146,7 +168,7 @@ export class CommandeService {
       });
 
       this.logger.log(
-        `Flux achat auto: +${ligne.quantite} "${ligne.produit.nom}" → entrepôt ${commande.entrepotId}`,
+        `Flux ${isAchat ? 'achat' : 'vente'} auto: ${isAchat ? '+' : '-'}${ligne.quantite} "${ligne.produit.nom}"`,
       );
     }
   }
@@ -198,6 +220,44 @@ export class CommandeService {
     return commande;
   }
 
+  async getFinancialStats() {
+    const deliveredSales = await this.prisma.commande.findMany({
+      where: {
+        type: TypeCommande.VENTE,
+        etat: EtatCommande.LIVREE,
+      },
+      include: {
+        commandesLigne: {
+          include: {
+            produit: {
+              select: { prixAchatMoyen: true },
+            },
+          },
+        },
+      },
+    });
+
+    let totalRevenue = 0;
+    let totalCOGS = 0;
+
+    for (const cmd of deliveredSales) {
+      const lines = (cmd as any).commandesLigne || [];
+      for (const line of lines) {
+        const rev = line.quantite * (line.prixUnitaire || 0);
+        const cost = line.quantite * (line.produit?.prixAchatMoyen || 0);
+        totalRevenue += rev;
+        totalCOGS += cost;
+      }
+    }
+
+    return {
+      revenue: totalRevenue,
+      cogs: totalCOGS,
+      profit: totalRevenue - totalCOGS,
+      margin: totalRevenue > 0 ? ((totalRevenue - totalCOGS) / totalRevenue) * 100 : 0,
+    };
+  }
+
   // ─────────────────────────────────────────────────────────────────
   //  UPDATE — handles state transitions with business rules
   // ─────────────────────────────────────────────────────────────────
@@ -218,18 +278,12 @@ export class CommandeService {
       );
     }
 
-    // Transition to LIVREE — only for commandes ACHAT
+    // Transition to LIVREE — applies to both ACHAT and VENTE
     if (updateCommandeDto.etat === EtatCommande.LIVREE) {
-      if (existing.type !== TypeCommande.ACHAT) {
-        throw new BadRequestException(
-          "Seules les commandes de type ACHAT peuvent être marquées comme LIVREE.",
-        );
-      }
-
       return this.prisma.$transaction(
         async (tx) => {
-          // 1. Generate all stock reception flux automatically
-          await this.generateFluxReception(id, tx);
+          // 1. Generate stock flux automatically
+          await this.generateFluxStock(id, tx);
 
           // 2. Update the commande state
           const updated = await tx.commande.update({
@@ -251,10 +305,10 @@ export class CommandeService {
                 commandeId: updated.id,
                 dateCreation: updated.dateCreation,
                 nomFournisseur: updated.fournisseur.nom,
-                lignes: updated.commandesLigne.map((l) => ({
+                lignes: updated.commandesLigne.map((l: any) => ({
                   nomProduit: l.produit.nom,
                   quantite: l.quantite,
-                  prixUnitaireAchat: l.prixUnitaireAchat,
+                  prixUnitaire: l.prixUnitaire,
                 })),
               })
               .catch((err) =>
@@ -290,10 +344,10 @@ export class CommandeService {
               commandeId: updated.id,
               dateCreation: updated.dateCreation,
               nomFournisseur: updated.fournisseur.nom,
-              lignes: updated.commandesLigne.map((l) => ({
+              lignes: updated.commandesLigne.map((l: any) => ({
                 nomProduit: l.produit.nom,
                 quantite: l.quantite,
-                prixUnitaireAchat: l.prixUnitaireAchat,
+                prixUnitaire: l.prixUnitaire,
               })),
             })
             .catch((err) =>

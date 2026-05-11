@@ -48,7 +48,8 @@ interface ProduitDetail {
   nom: string;
   codeBare: string;
   category: string;
-  prixActuel?: number | null;
+  prixAchatMoyen?: number | null;
+  prixVente?: number | null;
   stockAlert: number;
   stockEntrepots?: ProduitStockEntrepot[];
   fournisseurProduits?: ProduitFournisseur[];
@@ -101,7 +102,8 @@ export default function ProduitDetailPage() {
   const stocks = produit.stockEntrepots ?? [];
   const flux = (produit.fluxDeStocks ?? []).slice(0, 20);
   const stockTotal = stocks.reduce((s, se) => s + se.quantite, 0);
-  const prixActuel = produit.prixActuel ?? 0;
+  const prixAchatMoyen = produit.prixAchatMoyen ?? 0;
+  const prixVente = produit.prixVente ?? 0;
   const enAlerte = stockTotal <= produit.stockAlert;
 
   const openCreateLink = () => {
@@ -206,9 +208,9 @@ export default function ProduitDetailPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
         {[
           { label: 'Stock total',     value: stockTotal,                           color: enAlerte ? '#ef4444' : '#10b981' },
-          { label: 'Prix actuel CUMP', value: `${prixActuel.toFixed(2)} DT`, color: '#3b82f6' },
-          { label: 'Seuil alerte',    value: produit.stockAlert,                   color: '#f59e0b' },
-          { label: 'Valeur stock',    value: `${(stockTotal * prixActuel).toFixed(2)} DT`, color: '#8b5cf6' },
+          { label: 'Prix Achat (CUMP)', value: `${prixAchatMoyen.toFixed(2)} DT`, color: '#3b82f6' },
+          { label: 'Prix de Vente',    value: `${prixVente.toFixed(2)} DT`,        color: '#10b981' },
+          { label: 'Valeur stock (Cost)', value: `${(stockTotal * prixAchatMoyen).toFixed(2)} DT`, color: '#8b5cf6' },
         ].map(k => (
           <div key={k.label} className="kpi-card kpi-card--blue" style={{ borderLeftColor: k.color }}>
             <div>
@@ -259,7 +261,7 @@ export default function ProduitDetailPage() {
                         </div>
                       </td>
                       <td style={{ padding: '10px', fontSize: 13, color: 'var(--text-muted)' }}>
-                        {(se.quantite * prixActuel).toFixed(2)} DT
+                        {(se.quantite * prixAchatMoyen).toFixed(2)} DT
                       </td>
                     </tr>
                   );

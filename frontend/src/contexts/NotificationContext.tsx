@@ -41,7 +41,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    socket = io(`${WS_URL}/notifications`, { transports: ['websocket'] });
+    socket = io(`${WS_URL}/notifications`, {
+      transports: ['websocket'],
+      reconnectionDelay: 3000,
+      reconnectionDelayMax: 10000,
+    });
 
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));

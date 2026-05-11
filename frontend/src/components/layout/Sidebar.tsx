@@ -10,17 +10,47 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { path: '/dashboard',     icon: '📊', label: 'Tableau de bord' },
-  { path: '/produits',      icon: '📦', label: 'Produits' },
-  { path: '/entrepots',     icon: '🏭', label: 'Entrepôts' },
-  { path: '/fournisseurs',  icon: '🤝', label: 'Fournisseurs' },
-  { path: '/commandes',     icon: '🧾', label: 'Commandes' },
-  { path: '/flux-de-stock', icon: '🔄', label: 'Flux de Stock' },
-  { path: '/propositions',  icon: '🤖', label: 'Propositions IA' },
+  {
+    path: '/produits',
+    icon: '📦',
+    label: 'Produits',
+    roles: ['ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER', 'ACHAT'],
+  },
+  {
+    path: '/entrepots',
+    icon: '🏭',
+    label: 'Entrepôts',
+    roles: ['ADMIN', 'RESPONSABLE_STOCK'],
+  },
+  {
+    path: '/fournisseurs',
+    icon: '🤝',
+    label: 'Fournisseurs',
+    roles: ['ADMIN', 'RESPONSABLE_STOCK', 'ACHAT'],
+  },
+  {
+    path: '/commandes',
+    icon: '🧾',
+    label: 'Commandes',
+    roles: ['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK'],
+  },
+  {
+    path: '/flux-de-stock',
+    icon: '🔄',
+    label: 'Flux de Stock',
+    roles: ['ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER'],
+  },
+  {
+    path: '/propositions',
+    icon: '🤖',
+    label: 'Propositions IA',
+    roles: ['ADMIN', 'RESPONSABLE_STOCK', 'ACHAT'],
+  },
   {
     path: '/utilisateurs',
     icon: '👥',
     label: 'Utilisateurs',
-    roles: ['ADMINISTRATEUR'],
+    roles: ['ADMIN'],
   },
 ];
 

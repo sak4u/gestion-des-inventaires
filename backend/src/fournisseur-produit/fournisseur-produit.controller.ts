@@ -16,7 +16,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMINISTRATEUR', 'RESPONSABLE_APPRO') // Seuls les administrateurs et responsables d'approvisionnement peuvent gérer les associations fournisseur-produit
+@Roles('ADMIN', 'RESPONSABLE_STOCK', 'ACHAT') // Les responsables de stock et les acheteurs peuvent gérer les associations fournisseur-produit
 @Controller('fournisseur-produits')
 export class FournisseurProduitController {
   constructor(

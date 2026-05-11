@@ -16,7 +16,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('RESPONSABLE_APPRO', 'ADMINISTRATEUR')
+@Roles('ADMIN', 'ACHAT')
 @Controller('commandes')
 export class CommandeController {
   constructor(private readonly commandeService: CommandeService) {}
@@ -29,6 +29,12 @@ export class CommandeController {
   @Get()
   findAll() {
     return this.commandeService.findAll();
+  }
+
+  @Get('stats')
+  @Roles('ADMIN')
+  getStats() {
+    return this.commandeService.getFinancialStats();
   }
 
   @Get(':id')

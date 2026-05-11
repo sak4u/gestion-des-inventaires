@@ -8,7 +8,7 @@ type CommandeType = 'ACHAT' | 'VENTE';
 type CommandeEtat = 'EN_COURS' | 'FERMEE' | 'LIVREE' | 'ANNULEE';
 interface CommandeLine {
   quantite: number;
-  prixUnitaireAchat?: number;
+  prixUnitaire?: number;
 }
 interface Commande {
   id: string;
@@ -61,7 +61,7 @@ export default function CommandesPage() {
 
   const total = (c: Commande) =>
     (c.commandesLigne ?? []).reduce(
-      (s, l) => s + l.quantite * (l.prixUnitaireAchat ?? 0),
+      (s, l) => s + l.quantite * (l.prixUnitaire ?? 0),
       0,
     );
 
@@ -137,14 +137,14 @@ export default function CommandesPage() {
                         >
                           👁 Détail
                         </button>
-                        {c.etat === 'EN_COURS' && c.type === 'ACHAT' && (
+                        {c.etat === 'EN_COURS' && (
                           <button
                             className="btn-primary-sm"
                             style={{ padding: '5px 10px', fontSize: 12 }}
                             onClick={() => updateEtat(c.id, 'LIVREE')}
                             disabled={updatingId === c.id}
                           >
-                            ✅ Livrer
+                            ✅ {c.type === 'ACHAT' ? 'Livrer' : 'Expédier'}
                           </button>
                         )}
                         {c.etat === 'EN_COURS' && (

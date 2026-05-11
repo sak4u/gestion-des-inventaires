@@ -66,7 +66,9 @@ function AppRouter() {
         path="/produits"
         element={
           <RequireAuth>
-            <MainLayout><ProduitsPage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER', 'ACHAT']}>
+              <MainLayout><ProduitsPage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -74,7 +76,9 @@ function AppRouter() {
         path="/produits/:id"
         element={
           <RequireAuth>
-            <MainLayout><ProduitDetailPage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER', 'ACHAT']}>
+              <MainLayout><ProduitDetailPage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -82,7 +86,9 @@ function AppRouter() {
         path="/entrepots"
         element={
           <RequireAuth>
-            <MainLayout><EntrepotsPage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK']}>
+              <MainLayout><EntrepotsPage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -90,7 +96,9 @@ function AppRouter() {
         path="/entrepots/:id"
         element={
           <RequireAuth>
-            <MainLayout><EntrepotDetailPage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK']}>
+              <MainLayout><EntrepotDetailPage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -98,7 +106,9 @@ function AppRouter() {
         path="/fournisseurs"
         element={
           <RequireAuth>
-            <MainLayout><FournisseursPage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'ACHAT']}>
+              <MainLayout><FournisseursPage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -106,7 +116,9 @@ function AppRouter() {
         path="/fournisseurs/:id"
         element={
           <RequireAuth>
-            <MainLayout><FournisseurDetailPage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'ACHAT']}>
+              <MainLayout><FournisseurDetailPage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -114,7 +126,9 @@ function AppRouter() {
         path="/commandes"
         element={
           <RequireAuth>
-            <MainLayout><CommandesPage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK']}>
+              <MainLayout><CommandesPage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -122,7 +136,9 @@ function AppRouter() {
         path="/commandes/:id"
         element={
           <RequireAuth>
-            <MainLayout><CommandeDetailPage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK']}>
+              <MainLayout><CommandeDetailPage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -130,7 +146,9 @@ function AppRouter() {
         path="/commandes/nouvelle"
         element={
           <RequireAuth>
-            <MainLayout><NouvelleCommandePage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK']}>
+              <MainLayout><NouvelleCommandePage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -138,7 +156,9 @@ function AppRouter() {
         path="/flux-de-stock"
         element={
           <RequireAuth>
-            <MainLayout><FluxDeStockPage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER']}>
+              <MainLayout><FluxDeStockPage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -146,7 +166,9 @@ function AppRouter() {
         path="/propositions"
         element={
           <RequireAuth>
-            <MainLayout><PropositionsPage /></MainLayout>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'ACHAT']}>
+              <MainLayout><PropositionsPage /></MainLayout>
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -154,7 +176,7 @@ function AppRouter() {
         path="/utilisateurs"
         element={
           <RequireAuth>
-            <RequireRole roles={['ADMINISTRATEUR']}>
+            <RequireRole roles={['ADMIN']}>
               <MainLayout><UtilisateursPage /></MainLayout>
             </RequireRole>
           </RequireAuth>

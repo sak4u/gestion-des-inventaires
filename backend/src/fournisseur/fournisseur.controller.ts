@@ -18,7 +18,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMINISTRATEUR', 'RESPONSABLE_APPRO') // Seuls les administrateurs et responsables d'approvisionnement peuvent gérer les fournisseurs
+@Roles('ADMIN', 'RESPONSABLE_STOCK', 'ACHAT') // Les responsables de stock et les acheteurs peuvent gérer les fournisseurs
 @Controller('fournisseurs')
 export class FournisseurController {
   constructor(private readonly fournisseurService: FournisseurService) {}

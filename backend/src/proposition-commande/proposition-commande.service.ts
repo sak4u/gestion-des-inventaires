@@ -307,7 +307,7 @@ export class PropositionCommandeService {
             commandeId: commande.id,
             produitId: proposition.produitId,
             quantite: proposition.quantiteProposee,
-            prixUnitaireAchat: prixAchat,
+            prixUnitaire: prixAchat,
           },
         });
 
@@ -337,7 +337,7 @@ export class PropositionCommandeService {
           update: { quantite: { increment: proposition.quantiteProposee } },
         });
 
-        return { proposition: updatedProposition, commande, commandeLigne, prixUnitaireAchat: prixAchat, entrepot };
+        return { proposition: updatedProposition, commande, commandeLigne, prixUnitaire: prixAchat, entrepot };
       },
       { isolationLevel: 'Serializable' },
     );

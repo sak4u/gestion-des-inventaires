@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader';
 import { EmptyState, Spinner, SearchInput, BarcodeScanner } from '../components/ui/index';
 import Modal from '../components/ui/Modal';
 import { fluxDeStockApi, produitsApi, entrepotsApi, stockEntrepotApi } from '../api/index';
+import { useAuth } from '../contexts/AuthContext';
 
 const FLUX_COLORS: Record<string, string> = {
   achat:'#10b981',vente:'#3b82f6',perte:'#ef4444',
@@ -14,6 +16,7 @@ const FLUX_ICONS: Record<string,string> = {
 const MANUAL = ['vente','perte','retour','correction_inventaire','transfert'];
 
 export default function FluxDeStockPage() {
+  const { user } = useAuth();
   const [flux, setFlux] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('');
@@ -30,6 +33,8 @@ export default function FluxDeStockPage() {
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
 
+  const location = useLocation();
+
   const load = useCallback(async()=>{
     setLoading(true);
     try{ const r=await fluxDeStockApi.list(); setFlux(r.data??[]); }
@@ -37,6 +42,18 @@ export default function FluxDeStockPage() {
   },[]);
 
   useEffect(()=>{ load(); },[load]);
+
+  // ── Auto-open modal when navigated from scanner shortcuts ─────────────────
+  useEffect(() => {
+    const state = location.state as { openModal?: boolean; fluxType?: string } | null;
+    if (!state?.openModal) return;
+    const fluxType = state.fluxType ?? 'vente';
+    setForm({ produitId: '', codeBare: '', entrepotId: '', type: fluxType, quantite: '', note: '' });
+    setError('');
+    setShowModal(true);
+    // Clear navigation state so re-renders don't re-open the modal
+    window.history.replaceState({}, '');
+  }, [location.state]);
   useEffect(() => {
     const preload = async () => {
       const [p, e] = await Promise.allSettled([produitsApi.list(), entrepotsApi.list()]);
@@ -73,8 +90,19 @@ export default function FluxDeStockPage() {
 
   const handleSave = async()=>{
     if(!form.produitId||!form.entrepotId||!form.quantite){setError('Champs obligatoires manquants.');return;}
+    if(!user?.id){setError('Session expirée, reconnectez-vous.');return;}
+    
     setSaving(true); setError('');
-    try{ await fluxDeStockApi.create({...form,quantite:+form.quantite}); setShowModal(false); await load(); }
+    try{ 
+      const { codeBare, ...filteredData } = form;
+      await fluxDeStockApi.create({
+        ...filteredData,
+        quantite: +form.quantite,
+        creerParId: user.id
+      }); 
+      setShowModal(false); 
+      await load(); 
+    }
     catch(e:any){ setError(e?.response?.data?.message??'Erreur.'); }
     finally{ setSaving(false); }
   };
@@ -107,13 +135,22 @@ export default function FluxDeStockPage() {
     window.URL.revokeObjectURL(url);
   };
 
+  const [productSearch, setProductSearch] = useState('');
+
+  // Sync search text when produitId changes (e.g. via barcode scan)
+  useEffect(() => {
+    const p = produits.find(x => x.id === form.produitId);
+    if (p && p.nom !== productSearch) setProductSearch(p.nom);
+    if (!form.produitId && !form.codeBare) setProductSearch('');
+  }, [form.produitId, produits]);
+
   return (
     <div>
       <PageHeader icon="🔄" title="Flux de Stock" subtitle={`${flux.length} mouvement(s)`}
         actions={
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn-secondary" onClick={() => void handleExportCsv()} id="btn-export-stock-csv">⬇ Export CSV stock</button>
-            <button className="btn-icon" onClick={openModal} id="btn-nouveau-flux">＋ Ajouter un mouvement</button>
+            <button className="btn-icon" onClick={() => { setProductSearch(''); openModal(); }} id="btn-nouveau-flux">＋ Ajouter un mouvement</button>
           </div>
         }
       />
@@ -153,7 +190,19 @@ export default function FluxDeStockPage() {
                   <td style={{fontSize:12,color:'var(--text-muted)'}}>{new Date(f.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}</td>
                   <td><span style={{fontSize:12,fontWeight:700,padding:'3px 10px',borderRadius:20,background:`${FLUX_COLORS[f.type]??'#94a3b8'}22`,color:FLUX_COLORS[f.type]??'#94a3b8'}}>{FLUX_ICONS[f.type]} {f.type.replace('_',' ')}</span></td>
                   <td style={{fontWeight:600,color:'var(--text-primary)'}}>{f.produit?.nom??'—'}</td>
-                  <td><span style={{fontWeight:800,fontSize:16,color:['achat','retour'].includes(f.type)?'var(--success)':'var(--error)'}}>{['achat','retour'].includes(f.type)?'+':'-'}{f.quantite}</span></td>
+                  <td>
+                    {(() => {
+                      const isIncoming = ['achat', 'retour'].includes(f.type) || (f.type === 'correction_inventaire' && f.quantite > 0);
+                      const isOutgoing = ['vente', 'perte'].includes(f.type) || (f.type === 'correction_inventaire' && f.quantite < 0);
+                      const prefix = isIncoming ? '+' : isOutgoing ? '-' : '';
+                      const color = isIncoming ? 'var(--success)' : isOutgoing ? 'var(--error)' : 'var(--text-primary)';
+                      return (
+                        <span style={{ fontWeight: 800, fontSize: 16, color }}>
+                          {prefix}{Math.abs(f.quantite)}
+                        </span>
+                      );
+                    })()}
+                  </td>
                   <td style={{fontSize:13,color:'var(--text-secondary)'}}>{f.entrepot?.nom??'—'}</td>
                   <td style={{fontSize:12,color:'var(--text-muted)',maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.note??'—'}</td>
                   <td style={{fontSize:12,color:'var(--text-muted)'}}>{f.creerPar?.name??'—'}</td>
@@ -183,10 +232,26 @@ export default function FluxDeStockPage() {
             <button className="btn-secondary" onClick={() => void handleBarcodeLookup()}>🔎</button>
             <button className="btn-secondary" onClick={() => setShowScanner(true)} title="Scanner avec la caméra">📷</button>
           </div>
-          <select className="field-select" value={form.produitId} onChange={e=>setForm(f=>({...f,produitId:e.target.value}))}>
-            <option value="">Sélectionner…</option>
-            {produits.map((p:any)=><option key={p.id} value={p.id}>{p.nom}</option>)}
-          </select></div>
+          <input
+            className="field-input"
+            list="produits-list"
+            placeholder="Rechercher un produit par nom..."
+            value={productSearch}
+            onChange={e => {
+              const name = e.target.value;
+              setProductSearch(name);
+              const p = produits.find(x => x.nom === name);
+              if (p) {
+                setForm(f => ({ ...f, produitId: p.id, codeBare: p.codeBare }));
+              } else {
+                setForm(f => ({ ...f, produitId: '', codeBare: '' }));
+              }
+            }}
+          />
+          <datalist id="produits-list">
+            {produits.map((p: any) => <option key={p.id} value={p.nom} />)}
+          </datalist>
+        </div>
         <div className="field-group"><label className="field-label">Entrepôt *</label>
           <select className="field-select" value={form.entrepotId} onChange={e=>setForm(f=>({...f,entrepotId:e.target.value}))}>
             <option value="">Sélectionner…</option>

@@ -110,7 +110,8 @@ model Produit {
   codeBare            String               @unique
   category            String
   stockAlert          Int
-  prixActuel          Float                @default(0)
+  prixAchatMoyen      Float                @default(0) // CUMP
+  prixVente           Float                @default(0)
   fournisseurProduits FournisseurProduit[]
   commandesLigne      CommandeLigne[]
   fluxDeStocks        FluxDeStock[]
@@ -170,8 +171,8 @@ model Commande {
 
 model CommandeLigne {
   id                String   @id @default(uuid())
-  quantite          Int
-  prixUnitaireAchat Float    @default(0)
+  quantite     Int
+  prixUnitaire Float @default(0)
   commandeId        String
   commande          Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
   produitId         String

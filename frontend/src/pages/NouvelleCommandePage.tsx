@@ -13,13 +13,14 @@ interface ProductItem {
   id: string;
   nom: string;
   codeBare?: string;
-  prixActuel?: number;
+  prixAchatMoyen?: number;
+  prixVente?: number;
 }
 interface LigneForm {
   produitId: string;
   codeBare: string;
   quantite: number;
-  prixUnitaireAchat: number;
+  prixUnitaire: number;
 }
 
 export default function NouvelleCommandePage() {
@@ -32,10 +33,11 @@ export default function NouvelleCommandePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const [type, setType] = useState<'ACHAT' | 'VENTE'>('ACHAT');
   const [fournisseurId, setFournisseurId] = useState('');
   const [entrepotId, setEntrepotId] = useState('');
   const [lignes, setLignes] = useState<LigneForm[]>([
-    { produitId: '', codeBare: '', quantite: 1, prixUnitaireAchat: 0 },
+    { produitId: '', codeBare: '', quantite: 1, prixUnitaire: 0 },
   ]);
   const [scannerIndex, setScannerIndex] = useState<number | null>(null);
 
@@ -65,7 +67,7 @@ export default function NouvelleCommandePage() {
   };
 
   const addLigne = () => {
-    setLignes((prev) => [...prev, { produitId: '', codeBare: '', quantite: 1, prixUnitaireAchat: 0 }]);
+    setLignes((prev) => [...prev, { produitId: '', codeBare: '', quantite: 1, prixUnitaire: 0 }]);
   };
 
   const removeLigne = (index: number) => {
@@ -75,7 +77,7 @@ export default function NouvelleCommandePage() {
   const total = useMemo(
     () =>
       lignes.reduce(
-        (sum, l) => sum + l.quantite * l.prixUnitaireAchat,
+        (sum, l) => sum + l.quantite * l.prixUnitaire,
         0,
       ),
     [lignes],
@@ -87,8 +89,12 @@ export default function NouvelleCommandePage() {
       setError("Utilisateur non connecté. Merci de vous reconnecter.");
       return;
     }
-    if (!fournisseurId || !entrepotId) {
-      setError('Fournisseur et entrepot sont obligatoires.');
+    if (type === 'ACHAT' && !fournisseurId) {
+      setError('Le fournisseur est obligatoire pour un achat.');
+      return;
+    }
+    if (!entrepotId) {
+      setError("L'entrepôt est obligatoire.");
       return;
     }
     if (!lignes.length || lignes.some((l) => !l.produitId || l.quantite <= 0)) {
@@ -99,10 +105,10 @@ export default function NouvelleCommandePage() {
     setSaving(true);
     try {
       const commandeRes = await commandesApi.create({
-        type: 'ACHAT',
+        type,
         etat: 'EN_COURS',
         userId: user.id,
-        fournisseurId,
+        fournisseurId: type === 'ACHAT' ? fournisseurId : undefined,
         entrepotId,
       });
       const commandeId = (commandeRes.data as { id: string }).id;
@@ -113,7 +119,7 @@ export default function NouvelleCommandePage() {
             commandeId,
             produitId: l.produitId,
             quantite: l.quantite,
-            prixUnitaireAchat: l.prixUnitaireAchat,
+            prixUnitaire: l.prixUnitaire,
           }),
         ),
       );
@@ -139,10 +145,10 @@ export default function NouvelleCommandePage() {
     if (!codeBare) return;
     try {
       const res = await produitsApi.lookupByCodeBare(codeBare);
-      const produit = res.data as { id: string; prixActuel?: number };
+      const produit = res.data as { id: string; prixAchatMoyen?: number; prixVente?: number };
       setLigne(index, {
         produitId: produit.id,
-        prixUnitaireAchat: produit.prixActuel ?? 0,
+        prixUnitaire: type === 'ACHAT' ? (produit.prixAchatMoyen ?? 0) : (produit.prixVente ?? 0),
       });
     } catch {
       setError(`Code-barres introuvable: ${codeBare}`);
@@ -188,7 +194,7 @@ export default function NouvelleCommandePage() {
       <PageHeader
         icon="➕"
         title="Nouvelle commande"
-        subtitle="Creation d'une commande d'achat"
+        subtitle={type === 'ACHAT' ? "Création d'une commande d'achat" : "Création d'une commande de vente"}
         actions={
           <button className="btn-secondary" onClick={() => navigate('/commandes')}>
             ← Retour
@@ -211,25 +217,42 @@ export default function NouvelleCommandePage() {
       )}
 
       <div className="chart-card" style={{ marginBottom: 18 }}>
-        <p className="chart-title">Informations generales</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <p className="chart-title">Informations générales</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
           <div className="field-group">
-            <label className="field-label">Fournisseur *</label>
+            <label className="field-label">Type de commande *</label>
             <select
               className="field-select"
-              value={fournisseurId}
-              onChange={(e) => setFournisseurId(e.target.value)}
+              value={type}
+              onChange={(e) => {
+                const newType = e.target.value as 'ACHAT' | 'VENTE';
+                setType(newType);
+                if (newType === 'VENTE') setFournisseurId('');
+              }}
             >
-              <option value="">Selectionner...</option>
-              {fournisseurs.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.nom}
-                </option>
-              ))}
+              <option value="ACHAT">📦 ACHAT</option>
+              <option value="VENTE">🛒 VENTE</option>
             </select>
           </div>
+          {type === 'ACHAT' && (
+            <div className="field-group">
+              <label className="field-label">Fournisseur *</label>
+              <select
+                className="field-select"
+                value={fournisseurId}
+                onChange={(e) => setFournisseurId(e.target.value)}
+              >
+                <option value="">Sélectionner...</option>
+                {fournisseurs.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="field-group">
-            <label className="field-label">Entrepot destination *</label>
+            <label className="field-label">Entrepôt {type === 'ACHAT' ? 'destination' : 'source'} *</label>
             <select
               className="field-select"
               value={entrepotId}
@@ -259,7 +282,7 @@ export default function NouvelleCommandePage() {
                 <th>Produit</th>
                 <th>Code-barres</th>
                 <th>Quantite</th>
-                <th>Prix unitaire achat</th>
+                <th>Prix unitaire ({type === 'ACHAT' ? 'Achat' : 'Vente'})</th>
                 <th>Total ligne</th>
                 <th>Action</th>
               </tr>
@@ -276,7 +299,7 @@ export default function NouvelleCommandePage() {
                         setLigne(index, {
                           produitId: e.target.value,
                           codeBare: selected?.codeBare ?? '',
-                          prixUnitaireAchat: selected?.prixActuel ?? 0,
+                          prixUnitaire: type === 'ACHAT' ? (selected?.prixAchatMoyen ?? 0) : (selected?.prixVente ?? 0),
                         });
                       }}
                     >
@@ -344,14 +367,14 @@ export default function NouvelleCommandePage() {
                       type="number"
                       min={0}
                       step="0.01"
-                      value={l.prixUnitaireAchat}
+                      value={l.prixUnitaire}
                       onChange={(e) =>
-                        setLigne(index, { prixUnitaireAchat: Number.parseFloat(e.target.value || '0') })
+                        setLigne(index, { prixUnitaire: Number.parseFloat(e.target.value || '0') })
                       }
                     />
                   </td>
                   <td style={{ fontWeight: 700, color: 'var(--success)' }}>
-                    {(l.quantite * l.prixUnitaireAchat).toFixed(2)} DT
+                    {(l.quantite * l.prixUnitaire).toFixed(2)} DT
                   </td>
                   <td>
                     <button

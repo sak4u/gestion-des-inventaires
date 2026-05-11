@@ -14,7 +14,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('RESPONSABLE_APPRO','ADMINISTRATEUR')
+@Roles('ADMIN', 'RESPONSABLE_STOCK', 'ACHAT')
 @Controller('propositions')
 export class PropositionCommandeController {
   constructor(

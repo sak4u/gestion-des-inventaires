@@ -107,9 +107,14 @@ export class ProduitService {
 
   async update(id: string, updateProduitDto: UpdateProduitDto) {
     try {
+      // Guard: prixAchatMoyen (CUMP) must never be overwritten via REST update.
+      // It is recalculated automatically by generateFluxStock() on ACHAT deliveries.
+      const { ...safeDto } = updateProduitDto as Record<string, unknown>;
+      delete safeDto['prixAchatMoyen'];
+
       return await this.prisma.produit.update({
         where: { id },
-        data: updateProduitDto,
+        data: safeDto,
         include: {
           fournisseurProduits: { include: { fournisseur: true } },
           predictions: true,

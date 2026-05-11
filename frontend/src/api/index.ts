@@ -115,6 +115,7 @@ export const commandesApi = {
   delete: (id: string) => apiClient.delete(`/commandes/${id}`),
   accept: (id: string, entrepotId: string) =>
     apiClient.post(`/commandes/${id}/accept`, { entrepotId }),
+  stats: () => apiClient.get('/commandes/stats'),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

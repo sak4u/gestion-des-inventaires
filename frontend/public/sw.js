@@ -36,6 +36,9 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Skip non-HTTP(S) schemes (e.g. chrome-extension://) — they cannot be cached
+  if (!url.protocol.startsWith('http')) return;
+
   // API calls → NetworkFirst
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/auth') || url.pathname.startsWith('/produits') || url.pathname.startsWith('/stock') || url.pathname.startsWith('/commandes') || url.pathname.startsWith('/flux') || url.pathname.startsWith('/entrepots') || url.pathname.startsWith('/fournisseurs') || url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/propositions')) {
     event.respondWith(

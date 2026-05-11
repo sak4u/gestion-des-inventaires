@@ -8,7 +8,7 @@ type CommandeEtat = 'EN_COURS' | 'FERMEE' | 'LIVREE' | 'ANNULEE';
 interface CommandeLine {
   id: string;
   quantite: number;
-  prixUnitaireAchat?: number;
+  prixUnitaire?: number;
   produit?: { nom?: string };
 }
 interface Commande {
@@ -53,7 +53,7 @@ export default function CommandeDetailPage() {
   const total = useMemo(
     () =>
       (commande?.commandesLigne ?? []).reduce(
-        (sum, l) => sum + l.quantite * (l.prixUnitaireAchat ?? 0),
+        (sum, l) => sum + l.quantite * (l.prixUnitaire ?? 0),
         0,
       ),
     [commande],
@@ -117,12 +117,14 @@ export default function CommandeDetailPage() {
             </p>
           </div>
         </div>
-        <div className="kpi-card">
-          <div>
-            <p className="kpi-label">Fournisseur</p>
-            <p className="kpi-value" style={{ fontSize: 16 }}>{commande.fournisseur?.nom ?? '—'}</p>
+        {commande.type === 'ACHAT' && (
+          <div className="kpi-card">
+            <div>
+              <p className="kpi-label">Fournisseur</p>
+              <p className="kpi-value" style={{ fontSize: 16 }}>{commande.fournisseur?.nom ?? '—'}</p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="kpi-card">
           <div>
             <p className="kpi-label">Total</p>
@@ -134,9 +136,9 @@ export default function CommandeDetailPage() {
       <div className="chart-card" style={{ marginBottom: 20 }}>
         <p className="chart-title">Informations</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 14 }}>
-          <p><strong>Entrepot :</strong> {commande.entrepot?.nom ?? '—'}</p>
-          <p><strong>Cree par :</strong> {commande.user?.name ?? '—'}</p>
-          <p><strong>Email fournisseur :</strong> {commande.fournisseur?.email ?? '—'}</p>
+          <p><strong>Entrepôt :</strong> {commande.entrepot?.nom ?? '—'}</p>
+          <p><strong>Créé par :</strong> {commande.user?.name ?? '—'}</p>
+          {commande.type === 'ACHAT' && <p><strong>Email fournisseur :</strong> {commande.fournisseur?.email ?? '—'}</p>}
           <p><strong>Email utilisateur :</strong> {commande.user?.email ?? '—'}</p>
         </div>
       </div>
@@ -146,15 +148,13 @@ export default function CommandeDetailPage() {
           <p className="chart-title" style={{ marginBottom: 0 }}>Lignes de commande</p>
           {commande.etat === 'EN_COURS' && (
             <div style={{ display: 'flex', gap: 8 }}>
-              {commande.type === 'ACHAT' && (
-                <button
-                  className="btn-primary-sm"
-                  onClick={() => updateEtat('LIVREE')}
-                  disabled={updating}
-                >
-                  ✅ Marquer livree
-                </button>
-              )}
+              <button
+                className="btn-primary-sm"
+                onClick={() => updateEtat('LIVREE')}
+                disabled={updating}
+              >
+                ✅ Marquer {commande.type === 'ACHAT' ? 'livrée' : 'expédiée'}
+              </button>
               <button
                 className="btn-danger"
                 onClick={() => updateEtat('ANNULEE')}
@@ -182,9 +182,9 @@ export default function CommandeDetailPage() {
                   <tr key={l.id} className="table-row">
                     <td>{l.produit?.nom ?? '—'}</td>
                     <td>{l.quantite}</td>
-                    <td>{(l.prixUnitaireAchat ?? 0).toFixed(2)} DT</td>
+                    <td>{(l.prixUnitaire ?? 0).toFixed(2)} DT</td>
                     <td style={{ fontWeight: 700, color: 'var(--success)' }}>
-                      {(l.quantite * (l.prixUnitaireAchat ?? 0)).toFixed(2)} DT
+                      {(l.quantite * (l.prixUnitaire ?? 0)).toFixed(2)} DT
                     </td>
                   </tr>
                 ))}

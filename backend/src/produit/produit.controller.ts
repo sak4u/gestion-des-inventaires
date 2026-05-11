@@ -17,7 +17,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMINISTRATEUR', 'GESTIONNAIRE_STOCK') // Seuls les administrateurs et gestionnaires de stock peuvent gérer les produits
+@Roles('ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER', 'ACHAT') // Les magasiniers et acheteurs peuvent consulter les produits
 @Controller('produits')
 export class ProduitController {
   constructor(private readonly produitService: ProduitService) {}

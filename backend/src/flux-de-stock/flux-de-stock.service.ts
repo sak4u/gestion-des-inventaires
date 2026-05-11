@@ -94,7 +94,7 @@ export class FluxDeStockService {
           }),
           tx.produit.findUnique({
             where: { id: createFluxDeStockDto.produitId },
-            select: { id: true, prixActuel: true },
+            select: { id: true, prixAchatMoyen: true },
           }),
         ]);
 
@@ -177,7 +177,7 @@ export class FluxDeStockService {
                 produitId: createFluxDeStockDto.produitId,
               },
             });
-            if (commandeLigne) prixAchat = commandeLigne.prixUnitaireAchat;
+            if (commandeLigne) prixAchat = (commandeLigne as any).prixUnitaire;
           }
           
           if (prixAchat === null) {
@@ -197,19 +197,19 @@ export class FluxDeStockService {
             const globalStockAfter = agg._sum.quantite ?? 0;
             const globalStockBefore = Math.max(0, globalStockAfter - delta);
             
-            const totalValeurAncienne = globalStockBefore * (produit.prixActuel || 0);
+            const totalValeurAncienne = globalStockBefore * ((produit as any).prixAchatMoyen || 0);
             const valeurEntrante = delta * prixAchat;
             
-            const newPrixActuel = globalStockAfter > 0
+            const newPrixAchatMoyen = globalStockAfter > 0
               ? (totalValeurAncienne + valeurEntrante) / globalStockAfter
               : prixAchat;
               
             await tx.produit.update({
               where: { id: produit.id },
-              data: { prixActuel: newPrixActuel },
+              data: { prixAchatMoyen: newPrixAchatMoyen },
             });
             
-            this.logger.log(`CUMP calculé pour produit ${produit.id}: Ancien prix ${produit.prixActuel}, Nouveau prix ${newPrixActuel}`);
+            this.logger.log(`CUMP calculé pour produit ${produit.id}: Ancien prix ${(produit as any).prixAchatMoyen}, Nouveau prix ${newPrixAchatMoyen}`);
           }
         }
 

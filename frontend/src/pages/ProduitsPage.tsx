@@ -12,7 +12,8 @@ interface Produit {
   nom: string;
   codeBare: string;
   category: string;
-  prixActuel: number;
+  prixAchatMoyen: number;
+  prixVente: number;
   stockAlert: number;
   stockTotal?: number;
   createdAt: string;
@@ -23,9 +24,11 @@ interface ProduitForm {
   codeBare: string;
   category: string;
   stockAlert: string;
+  prixAchatMoyen: string;
+  prixVente: string;
 }
 
-const EMPTY_FORM: ProduitForm = { nom: '', codeBare: '', category: '', stockAlert: '' };
+const EMPTY_FORM: ProduitForm = { nom: '', codeBare: '', category: '', stockAlert: '', prixAchatMoyen: '0', prixVente: '0' };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function ProduitsPage() {
@@ -82,6 +85,8 @@ export default function ProduitsPage() {
       codeBare: p.codeBare,
       category: p.category,
       stockAlert: String(p.stockAlert),
+      prixAchatMoyen: String(p.prixAchatMoyen),
+      prixVente: String(p.prixVente),
     });
     setError('');
     setShowModal(true);
@@ -99,12 +104,18 @@ export default function ProduitsPage() {
       return;
     }
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       nom: form.nom.trim(),
       codeBare: form.codeBare.trim(),
       category: form.category.trim(),
       stockAlert: stockAlertParsed,
+      prixVente: Number.parseFloat(form.prixVente || '0'),
     };
+    // prixAchatMoyen is CUMP — only set on creation (initial seed), never on update.
+    // It is recalculated automatically by the backend on every ACHAT delivery.
+    if (!editTarget) {
+      payload.prixAchatMoyen = Number.parseFloat(form.prixAchatMoyen || '0');
+    }
 
     setSaving(true); setError('');
     try {
@@ -199,7 +210,8 @@ export default function ProduitsPage() {
                 <th>Produit</th>
                 <th>Code-barre</th>
                 <th>Catégorie</th>
-                <th>Prix (CUMP)</th>
+                <th>Prix Achat (Moyen)</th>
+                <th>Prix Vente</th>
                 <th>Stock total</th>
                 <th>Seuil alerte</th>
                 <th>Statut</th>
@@ -221,7 +233,8 @@ export default function ProduitsPage() {
                     </td>
                     <td><code style={{ fontSize: 12, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4 }}>{p.codeBare}</code></td>
                     <td><Badge variant="blue">{p.category || '—'}</Badge></td>
-                    <td style={{ fontWeight: 600, color: 'var(--success)' }}>{p.prixActuel.toFixed(2)} DT</td>
+                    <td style={{ fontWeight: 600, color: 'var(--text-muted)' }}>{Number(p.prixAchatMoyen ?? 0).toFixed(2)} DT</td>
+                    <td style={{ fontWeight: 700, color: 'var(--success)' }}>{Number(p.prixVente ?? 0).toFixed(2)} DT</td>
                     <td style={{ fontWeight: 700, fontSize: 15, color: (p.stockTotal ?? 0) <= p.stockAlert ? 'var(--error)' : 'var(--text-primary)' }}>
                       {p.stockTotal ?? '—'}
                     </td>
@@ -256,23 +269,56 @@ export default function ProduitsPage() {
 
         <div className="field-group">
           <label className="field-label">Nom du produit *</label>
-          <input className="field-input" value={form.nom}
+          <input className="field-input" id="produit-nom" name="nom" value={form.nom}
             onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} placeholder="Ex: Imprimante HP LaserJet" />
         </div>
         <div className="field-group">
           <label className="field-label">Code-barre *</label>
-          <input className="field-input" value={form.codeBare}
+          <input className="field-input" id="produit-codebare" name="codeBare" value={form.codeBare}
             onChange={e => setForm(f => ({ ...f, codeBare: e.target.value }))} placeholder="Ex: 8691234567890" />
         </div>
         <div className="field-group">
           <label className="field-label">Catégorie</label>
-          <input className="field-input" value={form.category}
+          <input className="field-input" id="produit-category" name="category" value={form.category}
             onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="Ex: Électronique, Bureautique…" />
         </div>
         <div className="field-group">
           <label className="field-label">Seuil d'alerte stock</label>
-          <input className="field-input" type="number" min={0} value={form.stockAlert}
+          <input className="field-input" id="produit-stockalert" name="stockAlert" type="number" min={0} value={form.stockAlert}
             onChange={e => setForm(f => ({ ...f, stockAlert: e.target.value }))} placeholder="Ex: 10" />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="field-group">
+            <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              Prix d'Achat Moyen (CUMP)
+              <span style={{ fontSize: 10, background: 'rgba(59,130,246,0.15)', color: 'var(--accent)', padding: '1px 6px', borderRadius: 4, fontWeight: 500 }}>
+                {editTarget ? 'AUTO' : 'Initial'}
+              </span>
+            </label>
+            <input
+              className="field-input"
+              id="produit-prixachatmoyen"
+              name="prixAchatMoyen"
+              type="number" min={0} step="0.01"
+              value={form.prixAchatMoyen}
+              onChange={e => setForm(f => ({ ...f, prixAchatMoyen: e.target.value }))}
+              placeholder="0.00"
+              readOnly={!!editTarget}
+              title={editTarget ? 'Calculé automatiquement lors des réceptions d\'achat (CUMP)' : 'Prix d\'achat initial'}
+              style={editTarget ? { opacity: 0.5, cursor: 'not-allowed', background: 'rgba(255,255,255,0.03)' } : {}}
+            />
+            {editTarget && (
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                ℹ️ Mis à jour automatiquement à chaque réception d'achat
+              </span>
+            )}
+          </div>
+          <div className="field-group">
+            <label className="field-label">Prix de Vente *</label>
+            <input className="field-input" id="produit-prixvente" name="prixVente" type="number" min={0} step="0.01" value={form.prixVente}
+              onChange={e => setForm(f => ({ ...f, prixVente: e.target.value }))} placeholder="0.00" />
+          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>

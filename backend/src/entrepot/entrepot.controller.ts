@@ -18,15 +18,11 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMINISTRATEUR')
 @Controller('entrepots')
 export class EntrepotController {
   constructor(private readonly entrepotService: EntrepotService) {}
 
-  @Post()
-  create(@Body() createEntrepotDto: CreateEntrepotDto) {
-    return this.entrepotService.create(createEntrepotDto);
-  }
+  // ── Read — accessible to all authenticated roles ───────────────────────────
 
   @Get()
   findAll(@Query() filterDto: GetEntrepotsFilterDto) {
@@ -38,7 +34,16 @@ export class EntrepotController {
     return this.entrepotService.findOne(id);
   }
 
+  // ── Write — restricted to admins and stock managers ───────────────────────
+
+  @Post()
+  @Roles('ADMIN', 'RESPONSABLE_STOCK')
+  create(@Body() createEntrepotDto: CreateEntrepotDto) {
+    return this.entrepotService.create(createEntrepotDto);
+  }
+
   @Patch(':id')
+  @Roles('ADMIN', 'RESPONSABLE_STOCK')
   update(
     @Param('id') id: string,
     @Body() updateEntrepotDto: UpdateEntrepotDto,
@@ -47,6 +52,7 @@ export class EntrepotController {
   }
 
   @Delete(':id')
+  @Roles('ADMIN', 'RESPONSABLE_STOCK')
   remove(@Param('id') id: string) {
     return this.entrepotService.remove(id);
   }

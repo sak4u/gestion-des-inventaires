@@ -5,7 +5,14 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true,   // expose on LAN → accessible from smartphone
+    host: true,      // expose on LAN → accessible from smartphone
     port: 5173,
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 5173,
+      clientPort: 5173,
+    },
   },
 })
+

@@ -17,7 +17,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('GESTIONNAIRE_STOCK','ADMINISTRATEUR') 
+@Roles('ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER')
 @Controller('flux-de-stocks')
 export class FluxDeStockController {
   constructor(private readonly fluxDeStockService: FluxDeStockService) {}

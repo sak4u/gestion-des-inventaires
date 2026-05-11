@@ -24,13 +24,16 @@ async function main() {
 
   // Création des rôles
   const roleAdmin = await prisma.role.create({
-    data: { name: 'ADMINISTRATEUR', description: 'Administrateur principal' },
+    data: { name: 'ADMIN', description: 'Administrateur principal' },
   });
-  const roleResp = await prisma.role.create({
-    data: { name: 'RESPONSABLE_APPRO', description: "Responsable d'approvisionnement" },
+  const roleRespStock = await prisma.role.create({
+    data: { name: 'RESPONSABLE_STOCK', description: 'Manager de stock' },
   });
-  const roleGs = await prisma.role.create({
-    data: { name: 'GESTIONNAIRE_STOCK', description: 'Gestionnaire de stock' },
+  const roleMagasinier = await prisma.role.create({
+    data: { name: 'MAGASINIER', description: 'Employé entrepôt / Magasinier' },
+  });
+  const roleAchat = await prisma.role.create({
+    data: { name: 'ACHAT', description: 'Gestionnaire Achat & Fournisseurs' },
   });
 
   console.log('✔ Rôles créés.');
@@ -41,7 +44,7 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       name: 'Admin User',
-      email: 'sakly@email.com',
+      email: 'admin@email.com',
       password: hashedPassword,
       roleId: roleAdmin.id,
     },
@@ -49,19 +52,28 @@ async function main() {
 
   const responsable = await prisma.user.create({
     data: {
-      name: 'Responsable User',
-      email: 'skmed12345@gmail.com',
+      name: 'Responsable Stock',
+      email: 'manager@email.com',
       password: hashedPassword,
-      roleId: roleResp.id,
+      roleId: roleRespStock.id,
     },
   });
 
   const gs = await prisma.user.create({
     data: {
-      name: 'GS User',
-      email: 'cycle2228@gmail.com',
+      name: 'Magasinier User',
+      email: 'magasinier@email.com',
       password: hashedPassword,
-      roleId: roleGs.id,
+      roleId: roleMagasinier.id,
+    },
+  });
+
+  const acheteur = await prisma.user.create({
+    data: {
+      name: 'Acheteur User',
+      email: 'achat@email.com',
+      password: hashedPassword,
+      roleId: roleAchat.id,
     },
   });
 
@@ -104,7 +116,8 @@ async function main() {
         codeBare: `PRD-${Date.now()}-${i}`,
         category: categories[i % categories.length],
         stockAlert: 40 + (i * 2),
-        prixActuel: 50.0 + (i * 1.5),
+        prixAchatMoyen: 50.0 + (i * 1.5),
+        prixVente: 70.0 + (i * 2.0),
       }
     });
     produits.push(produit);
@@ -222,7 +235,7 @@ async function main() {
           commandeId: commande.id,
           produitId: prod.id,
           quantite: 20,
-          prixUnitaireAchat: prod.prixActuel * 0.8
+          prixUnitaire: prod.prixAchatMoyen * 0.8
         }
       });
     }
