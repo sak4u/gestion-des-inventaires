@@ -32,7 +32,7 @@ export default function StockManagerDashboard({ kpis, propositions, entrepots }:
         <KpiCard icon="💰" label="Valeur Stock"     value={globalCapacityLabel(entrepots)} color="orange" />
       </div>
 
-      <div className="dashboard-sections-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
+      <div className="dashboard-sections-grid">
 
         {/* ── Propositions ─────────────────────────────────────────── */}
         <div className="chart-card">

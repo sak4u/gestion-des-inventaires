@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthLeftPanel } from '../components/AuthLeftPanel';
 import api from '../api/client';
+import { User, Mail, Lock, EyeOff, Eye, Tag, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
 const ROLES = [
   { value: 'ADMINISTRATEUR',    label: 'Administrateur',           desc: 'Gestion totale : utilisateurs, entrepôts, produits' },
@@ -69,8 +70,8 @@ export default function RegisterPage() {
             <p>Rejoignez la plateforme de gestion intelligente des inventaires.</p>
           </div>
 
-          {error   && <div className="alert alert-error">⚠️ {error}</div>}
-          {success && <div className="alert alert-success">✅ {success}</div>}
+          {error   && <div className="alert alert-error" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={18} /> {error}</div>}
+          {success && <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><CheckCircle size={18} /> {success}</div>}
 
           <form onSubmit={handleSubmit} noValidate>
 
@@ -78,7 +79,7 @@ export default function RegisterPage() {
             <div className="form-group">
               <label className="form-label" htmlFor="reg-name">Nom complet</label>
               <div className="input-wrapper">
-                <span className="input-icon">👤</span>
+                <span className="input-icon" style={{ display: 'flex', alignItems: 'center' }}><User size={18} /></span>
                 <input id="reg-name" type="text" className="form-input"
                   placeholder="Mohamed Sakly"
                   value={form.name} onChange={set('name')} required />
@@ -89,7 +90,7 @@ export default function RegisterPage() {
             <div className="form-group">
               <label className="form-label" htmlFor="reg-email">Adresse e-mail</label>
               <div className="input-wrapper">
-                <span className="input-icon">✉️</span>
+                <span className="input-icon" style={{ display: 'flex', alignItems: 'center' }}><Mail size={18} /></span>
                 <input id="reg-email" type="email" className="form-input"
                   placeholder="vous@exemple.com"
                   value={form.email} onChange={set('email')} required />
@@ -100,12 +101,12 @@ export default function RegisterPage() {
             <div className="form-group">
               <label className="form-label" htmlFor="reg-pwd">Mot de passe</label>
               <div className="input-wrapper">
-                <span className="input-icon">🔒</span>
+                <span className="input-icon" style={{ display: 'flex', alignItems: 'center' }}><Lock size={18} /></span>
                 <input id="reg-pwd" type={showPwd ? 'text' : 'password'} className="form-input"
                   placeholder="Minimum 8 caractères"
                   value={form.password} onChange={set('password')} required />
                 <button type="button" className="input-action" onClick={() => setShowPwd(v => !v)}>
-                  {showPwd ? '🙈' : '👁️'}
+                  {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               {form.password.length > 0 && (
@@ -128,7 +129,7 @@ export default function RegisterPage() {
             <div className="form-group">
               <label className="form-label" htmlFor="reg-role">Rôle dans l'organisation</label>
               <div className="input-wrapper">
-                <span className="input-icon">🏷️</span>
+                <span className="input-icon" style={{ display: 'flex', alignItems: 'center' }}><Tag size={18} /></span>
                 <select id="reg-role" className="form-select"
                   value={form.roleName} onChange={set('roleName')} required>
                   <option value="" disabled>Choisissez votre rôle…</option>
@@ -138,7 +139,9 @@ export default function RegisterPage() {
                 </select>
               </div>
               {selectedRole && (
-                <p className="role-description">ℹ️ {selectedRole.desc}</p>
+                <p className="role-description" style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                  <Info size={16} style={{ flexShrink: 0, marginTop: 2 }} /> {selectedRole.desc}
+                </p>
               )}
             </div>
 

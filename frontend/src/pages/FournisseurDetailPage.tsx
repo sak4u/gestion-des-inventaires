@@ -5,6 +5,7 @@ import { EmptyState, Spinner, Badge, SearchInput } from '../components/ui/index'
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { fournisseursApi, commandesApi, fournisseurProduitApi, produitsApi } from '../api/index';
+import { Handshake, Package, Edit2, Trash2, AlertTriangle, Plus } from 'lucide-react';
 
 interface Fournisseur {
   id: string;
@@ -230,13 +231,13 @@ export default function FournisseurDetailPage() {
   return (
     <div>
       <PageHeader
-        icon="🤝"
+        icon={<Handshake size={28} />}
         title={fournisseur?.nom ?? 'Détail fournisseur'}
         subtitle={fournisseur?.email ?? fournisseur?.telephone ?? 'Informations fournisseur'}
         actions={
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-icon" onClick={openCreateCatalogue}>
-              ＋ Associer produit
+            <button className="btn-icon" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={openCreateCatalogue}>
+              <Plus size={16} /> Associer produit
             </button>
             <button className="btn-secondary" onClick={() => navigate('/fournisseurs')}>
               ← Retour
@@ -288,7 +289,7 @@ export default function FournisseurDetailPage() {
         </div>
       ) : catalogue.length === 0 ? (
         <EmptyState
-          icon="📦"
+          icon={<Package size={48} />}
           title="Catalogue vide"
           subtitle="Aucun produit n'est encore associé à ce fournisseur."
         />
@@ -322,11 +323,11 @@ export default function FournisseurDetailPage() {
                     <td>{typeof row.delaiLivraison === 'number' ? `${row.delaiLivraison} jour(s)` : '—'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => openEditCatalogue(row)}>
-                          ✏️
+                        <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => openEditCatalogue(row)}>
+                          <Edit2 size={14} />
                         </button>
-                        <button className="btn-danger" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setDeleteLinkId(row.id)}>
-                          🗑
+                        <button className="btn-danger" style={{ padding: '5px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setDeleteLinkId(row.id)}>
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -369,7 +370,6 @@ export default function FournisseurDetailPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
                 <th>Date</th>
                 <th>Type</th>
                 <th>Etat</th>
@@ -379,13 +379,13 @@ export default function FournisseurDetailPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: 20 }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: 20 }}>
                     <Spinner size={18} />
                   </td>
                 </tr>
               ) : filteredCommandes.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>
+                  <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>
                     Aucune commande d'achat liée à ce fournisseur.
                   </td>
                 </tr>
@@ -397,8 +397,7 @@ export default function FournisseurDetailPage() {
                   );
                   return (
                     <tr key={commande.id} className="table-row">
-                      <td><code style={{ fontSize: 11 }}>{commande.id.slice(0, 8)}...</code></td>
-                      <td>{new Date(commande.dateCreation).toLocaleDateString('fr-FR')}</td>
+                    <td>{new Date(commande.dateCreation).toLocaleDateString('fr-FR')}</td>
                       <td>
                         <Badge variant={commande.type === 'ACHAT' ? 'blue' : 'purple'}>
                           {commande.type}
@@ -433,8 +432,8 @@ export default function FournisseurDetailPage() {
         size="md"
       >
         {formError && (
-          <div className="alert alert-error" style={{ marginBottom: 16 }}>
-            ⚠️ {formError}
+          <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertTriangle size={18} /> {formError}
           </div>
         )}
         <div className="field-group">

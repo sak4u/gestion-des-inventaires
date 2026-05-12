@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Receipt, Camera, Eye, Check, X, Plus } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
-import { EmptyState, Spinner, SearchInput, Badge } from '../components/ui/index';
+import { EmptyState, Spinner, SearchInput, Badge, BarcodeScanner } from '../components/ui/index';
 import { commandesApi } from '../api/index';
 
 type CommandeType = 'ACHAT' | 'VENTE';
@@ -31,10 +32,22 @@ export default function CommandesPage() {
   const navigate = useNavigate();
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [loading, setLoading]       = useState(true);
-  const [typeFilter, setTypeFilter] = useState('');
-  const [etatFilter, setEtatFilter] = useState('');
+  const location = useLocation();
+  const state = location.state as { typeFilter?: string; etatFilter?: string; openScanner?: boolean } | null;
+
+  const [typeFilter, setTypeFilter] = useState(state?.typeFilter ?? '');
+  const [etatFilter, setEtatFilter] = useState(state?.etatFilter ?? '');
   const [search, setSearch]         = useState('');
+  const [scannedCode, setScannedCode] = useState('');
+  const [showScanner, setShowScanner] = useState(state?.openScanner ?? false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  // Clear scanner state to prevent reopening loops
+  useEffect(() => {
+    if (state?.openScanner) {
+      window.history.replaceState({}, '');
+    }
+  }, [state]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,14 +63,31 @@ export default function CommandesPage() {
   useEffect(() => { load(); }, [load]);
 
   const filtered = useMemo(() => {
-    if (!search) return commandes;
-    const needle = search.toLowerCase();
-    return commandes.filter(
-      (c) =>
-        (c.fournisseur?.nom?.toLowerCase().includes(needle) ?? false) ||
-        c.id.includes(search),
-    );
-  }, [search, commandes]);
+    let result = commandes;
+
+    if (scannedCode) {
+      const needle = scannedCode.toLowerCase();
+      result = result.filter(c => 
+        (c.commandesLigne ?? []).some(l => 
+          (l as any).produit?.codeBare?.toLowerCase() === needle
+        )
+      );
+    }
+
+    if (search) {
+      const needle = search.toLowerCase();
+      result = result.filter(
+        (c) =>
+          (c.fournisseur?.nom?.toLowerCase().includes(needle) ?? false) ||
+          c.id.toLowerCase().includes(needle) ||
+          (c.commandesLigne ?? []).some(l => 
+            (l as any).produit?.nom?.toLowerCase().includes(needle) ||
+            (l as any).produit?.codeBare?.toLowerCase().includes(needle)
+          )
+      );
+    }
+    return result;
+  }, [search, scannedCode, commandes]);
 
   const total = (c: Commande) =>
     (c.commandesLigne ?? []).reduce(
@@ -77,17 +107,22 @@ export default function CommandesPage() {
 
   return (
     <div>
-      <PageHeader icon="🧾" title="Commandes" subtitle={`${commandes.length} commande(s) trouvée(s)`}
+      <PageHeader icon={<Receipt size={28} />} title="Commandes" subtitle={`${commandes.length} commande(s) trouvée(s)`}
         actions={
-          <button className="btn-icon" onClick={() => navigate('/commandes/nouvelle')} id="btn-nouvelle-commande">
-            ＋ Nouvelle commande
+          <button className="btn-icon" onClick={() => navigate('/commandes/nouvelle')} id="btn-nouvelle-commande" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Plus size={18} /> Nouvelle commande
           </button>
         }
       />
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <SearchInput placeholder="Rechercher par fournisseur, ID…" onSearch={setSearch} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <SearchInput placeholder="Fournisseur, Produit, ID…" onSearch={(val) => { setSearch(val); if(!val) setScannedCode(''); }} />
+          <button className="btn-secondary" onClick={() => setShowScanner(true)} title="Scanner un produit" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Camera size={16} /> Scanner
+          </button>
+        </div>
 
         <select className="field-select" style={{ width: 'auto', padding: '9px 14px' }}
           value={typeFilter} onChange={e => setTypeFilter(e.target.value)} id="filter-type">
@@ -109,19 +144,18 @@ export default function CommandesPage() {
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon="🧾" title="Aucune commande" subtitle="Créez une commande d'achat pour commencer." />
+        <EmptyState icon={<Receipt size={48} />} title="Aucune commande" subtitle="Créez une commande d'achat pour commencer." />
       ) : (
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
-              <tr><th>ID</th><th>Type</th><th>Fournisseur</th><th>Entrepôt</th><th>Total</th><th>État</th><th>Date</th><th>Actions</th></tr>
+              <tr><th>Type</th><th>Fournisseur</th><th>Entrepôt</th><th>Total</th><th>État</th><th>Date</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {filtered.map(c => {
                 const et = ETAT_BADGE[c.etat] ?? { label: c.etat, variant: 'gray' };
                 return (
                   <tr key={c.id} className="table-row">
-                    <td><code style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4 }}>{c.id.slice(0, 8)}…</code></td>
                     <td><Badge variant={c.type === 'ACHAT' ? 'blue' : 'purple'}>{c.type}</Badge></td>
                     <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{c.fournisseur?.nom ?? '—'}</td>
                     <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{c.entrepot?.nom ?? '—'}</td>
@@ -132,29 +166,29 @@ export default function CommandesPage() {
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
                           className="btn-secondary"
-                          style={{ padding: '5px 12px', fontSize: 12 }}
+                          style={{ padding: '5px 12px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
                           onClick={() => navigate(`/commandes/${c.id}`)}
                         >
-                          👁 Détail
+                          <Eye size={14} /> Détail
                         </button>
                         {c.etat === 'EN_COURS' && (
                           <button
                             className="btn-primary-sm"
-                            style={{ padding: '5px 10px', fontSize: 12 }}
+                            style={{ padding: '5px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
                             onClick={() => updateEtat(c.id, 'LIVREE')}
                             disabled={updatingId === c.id}
                           >
-                            ✅ {c.type === 'ACHAT' ? 'Livrer' : 'Expédier'}
+                            <Check size={14} /> {c.type === 'ACHAT' ? 'Livrer' : 'Expédier'}
                           </button>
                         )}
                         {c.etat === 'EN_COURS' && (
                           <button
                             className="btn-danger"
-                            style={{ padding: '5px 10px', fontSize: 12 }}
+                            style={{ padding: '5px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
                             onClick={() => updateEtat(c.id, 'ANNULEE')}
                             disabled={updatingId === c.id}
                           >
-                            ✖ Annuler
+                            <X size={14} /> Annuler
                           </button>
                         )}
                       </div>
@@ -166,6 +200,13 @@ export default function CommandesPage() {
           </table>
         </div>
       )}
+
+      <BarcodeScanner
+        open={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScan={(code) => { setScannedCode(code); setShowScanner(false); }}
+        title="Scanner le produit recu"
+      />
     </div>
   );
 }

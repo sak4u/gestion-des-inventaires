@@ -1,6 +1,8 @@
 // ── KpiCard ───────────────────────────────────────────────────────────────────
+import { Mailbox, Search, X } from 'lucide-react';
+
 export interface KpiCardProps {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   value: string | number;
   trend?: 'up' | 'down' | 'stable';
@@ -51,8 +53,8 @@ export function Spinner({ size = 24 }: { size?: number }) {
 }
 
 // ── EmptyState ────────────────────────────────────────────────────────────────
-export function EmptyState({ icon = '📭', title, subtitle }: {
-  icon?: string;
+export function EmptyState({ icon = <Mailbox size={48} />, title, subtitle }: {
+  icon?: React.ReactNode;
   title: string;
   subtitle?: string;
 }) {
@@ -100,7 +102,7 @@ export function SearchInput({
 
   return (
     <div className="search-input-wrapper">
-      <span className="search-icon">🔍</span>
+      <span className="search-icon"><Search size={18} /></span>
       <input
         className="search-input"
         type="text"
@@ -109,7 +111,7 @@ export function SearchInput({
         onChange={(e) => setValue(e.target.value)}
       />
       {value && (
-        <button className="search-clear" onClick={() => setValue('')}>✕</button>
+        <button className="search-clear" onClick={() => setValue('')}><X size={16} /></button>
       )}
     </div>
   );

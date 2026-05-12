@@ -5,6 +5,7 @@ import { SearchInput, Badge, EmptyState, Spinner } from '../components/ui/index'
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { produitsApi } from '../api/index';
+import { Package, Plus, AlertTriangle, Eye, Edit2, Trash2, Info, Download } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Produit {
@@ -155,16 +156,48 @@ export default function ProduitsPage() {
     return                        { label: 'OK',        cls: 'badge--green'  };
   };
 
+  const handleExportCsv = async () => {
+    if (filtered.length === 0) return;
+    const header = ['Nom', 'Code-barre', 'Catégorie', 'Prix Achat (Moyen)', 'Prix Vente', 'Stock Total', 'Seuil Alerte'];
+    const escapeCsv = (str: any) => `"${String(str ?? '').replace(/"/g, '""')}"`;
+    const rows = filtered.map(p => [
+      escapeCsv(p.nom),
+      escapeCsv(p.codeBare),
+      escapeCsv(p.category),
+      escapeCsv(p.prixAchatMoyen),
+      escapeCsv(p.prixVente),
+      escapeCsv(p.stockTotal ?? 0),
+      escapeCsv(p.stockAlert)
+    ]);
+    const csvContent = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    // Use Byte Order Mark (BOM) to ensure Excel reads UTF-8 correctly
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `export-produits-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <PageHeader
-        icon="📦"
+        icon={<Package size={28} />}
         title="Produits"
         subtitle={`${produits.length} produit${produits.length !== 1 ? 's' : ''} enregistré${produits.length !== 1 ? 's' : ''}`}
         actions={
-          <button className="btn-icon" onClick={openCreate} id="btn-nouveau-produit">
-            ＋ Nouveau produit
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => void handleExportCsv()} id="btn-export-produits-csv">
+              <Download size={14} /> Export CSV
+            </button>
+            <button className="btn-icon" onClick={openCreate} id="btn-nouveau-produit" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Plus size={18} /> Nouveau produit
+            </button>
+          </div>
         }
       />
 
@@ -191,7 +224,7 @@ export default function ProduitsPage() {
               className={alertFilter === v ? 'btn-primary-sm' : 'btn-secondary'}
               style={{ padding: '7px 14px', fontSize: 13 }}
             >
-              {v === 'all' ? 'Tous' : '⚠️ En alerte'}
+              {v === 'all' ? 'Tous' : <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={14} /> En alerte</span>}
             </button>
           ))}
         </div>
@@ -201,7 +234,7 @@ export default function ProduitsPage() {
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon="📦" title="Aucun produit trouvé" subtitle="Modifiez vos filtres ou créez un nouveau produit." />
+        <EmptyState icon={<Package size={48} />} title="Aucun produit trouvé" subtitle="Modifiez vos filtres ou créez un nouveau produit." />
       ) : (
         <div className="table-wrapper">
           <table className="data-table">
@@ -242,12 +275,12 @@ export default function ProduitsPage() {
                     <td><span className={`badge ${st.cls}`}>{st.label}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12 }}
-                          onClick={() => navigate(`/produits/${p.id}`)} title="Voir détail">👁</button>
-                        <button className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12 }}
-                          onClick={() => openEdit(p)} title="Modifier">✏️</button>
-                        <button className="btn-danger" style={{ padding: '5px 12px', fontSize: 12 }}
-                          onClick={() => setDeleteId(p.id)} title="Supprimer">🗑</button>
+                        <button className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12, display: 'flex', alignItems: 'center' }}
+                          onClick={() => navigate(`/produits/${p.id}`)} title="Voir détail"><Eye size={14} /></button>
+                        <button className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12, display: 'flex', alignItems: 'center' }}
+                          onClick={() => openEdit(p)} title="Modifier"><Edit2 size={14} /></button>
+                        <button className="btn-danger" style={{ padding: '5px 12px', fontSize: 12, display: 'flex', alignItems: 'center' }}
+                          onClick={() => setDeleteId(p.id)} title="Supprimer"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -265,7 +298,7 @@ export default function ProduitsPage() {
         title={editTarget ? `Modifier — ${editTarget.nom}` : 'Nouveau produit'}
         size="md"
       >
-        {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠️ {error}</div>}
+        {error && <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={18} /> {error}</div>}
 
         <div className="field-group">
           <label className="field-label">Nom du produit *</label>
@@ -309,8 +342,8 @@ export default function ProduitsPage() {
               style={editTarget ? { opacity: 0.5, cursor: 'not-allowed', background: 'rgba(255,255,255,0.03)' } : {}}
             />
             {editTarget && (
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
-                ℹ️ Mis à jour automatiquement à chaque réception d'achat
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Info size={14} /> Mis à jour automatiquement à chaque réception d'achat
               </span>
             )}
           </div>

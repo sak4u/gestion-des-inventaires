@@ -3,15 +3,16 @@ import { useLocation } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader';
 import { EmptyState, Spinner, SearchInput, BarcodeScanner } from '../components/ui/index';
 import Modal from '../components/ui/Modal';
-import { fluxDeStockApi, produitsApi, entrepotsApi, stockEntrepotApi } from '../api/index';
+import { fluxDeStockApi, produitsApi, entrepotsApi } from '../api/index';
 import { useAuth } from '../contexts/AuthContext';
+import { RefreshCw, Download, Plus, Search, Camera, Inbox, Upload, HeartCrack, Undo2, Wrench, Shuffle, AlertTriangle } from 'lucide-react';
 
 const FLUX_COLORS: Record<string, string> = {
   achat:'#10b981',vente:'#3b82f6',perte:'#ef4444',
   retour:'#f59e0b',correction_inventaire:'#8b5cf6',transfert:'#06b6d4',
 };
-const FLUX_ICONS: Record<string,string> = {
-  achat:'📥',vente:'📤',perte:'💔',retour:'↩️',correction_inventaire:'🔧',transfert:'🔀',
+const FLUX_ICONS: Record<string, React.ReactNode> = {
+  achat:<Inbox size={14}/>,vente:<Upload size={14}/>,perte:<HeartCrack size={14}/>,retour:<Undo2 size={14}/>,correction_inventaire:<Wrench size={14}/>,transfert:<Shuffle size={14}/>,
 };
 const MANUAL = ['vente','perte','retour','correction_inventaire','transfert'];
 
@@ -32,6 +33,8 @@ export default function FluxDeStockPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const location = useLocation();
 
@@ -81,6 +84,11 @@ export default function FluxDeStockPage() {
     });
   }, [flux, typeFilter, produitFilter, entrepotFilter, fromDate, toDate, search]);
 
+  useEffect(() => { setCurrentPage(1); }, [typeFilter, produitFilter, entrepotFilter, fromDate, toDate, search]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const openModal = async()=>{
     setForm({produitId:'',codeBare:'',entrepotId:'',type:'vente',quantite:'',note:''}); setError(''); setShowModal(true);
     const [p,e] = await Promise.allSettled([produitsApi.list(),entrepotsApi.list()]);
@@ -120,15 +128,26 @@ export default function FluxDeStockPage() {
   };
 
   const handleExportCsv = async () => {
-    const params: Record<string, string> = {};
-    if (produitFilter) params.produitId = produitFilter;
-    if (entrepotFilter) params.entrepotId = entrepotFilter;
-    const res = await stockEntrepotApi.exportCsv(params);
-    const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+    if (filtered.length === 0) return;
+    const header = ['Date', 'Type', 'Produit', 'Quantité', 'Entrepôt', 'Note', 'Créé par'];
+    const escapeCsv = (str: any) => `"${String(str ?? '').replace(/"/g, '""')}"`;
+    const rows = filtered.map((f: any) => [
+      escapeCsv(new Date(f.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })),
+      escapeCsv(f.type.toUpperCase()),
+      escapeCsv(f.produit?.nom),
+      escapeCsv(f.quantite),
+      escapeCsv(f.entrepot?.nom),
+      escapeCsv(f.note),
+      escapeCsv(f.creerPar?.name)
+    ]);
+    const csvContent = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    // Use Byte Order Mark (BOM) to ensure Excel reads UTF-8 correctly
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `stock-entrepot-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `export-flux-${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -146,11 +165,11 @@ export default function FluxDeStockPage() {
 
   return (
     <div>
-      <PageHeader icon="🔄" title="Flux de Stock" subtitle={`${flux.length} mouvement(s)`}
+      <PageHeader icon={<RefreshCw size={28} />} title="Flux de Stock" subtitle={`${flux.length} mouvement(s)`}
         actions={
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-secondary" onClick={() => void handleExportCsv()} id="btn-export-stock-csv">⬇ Export CSV stock</button>
-            <button className="btn-icon" onClick={() => { setProductSearch(''); openModal(); }} id="btn-nouveau-flux">＋ Ajouter un mouvement</button>
+            <button className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => void handleExportCsv()} id="btn-export-stock-csv"><Download size={14} /> Export CSV</button>
+            <button className="btn-icon" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => { setProductSearch(''); openModal(); }} id="btn-nouveau-flux"><Plus size={16} /> Ajouter un mouvement</button>
           </div>
         }
       />
@@ -175,20 +194,21 @@ export default function FluxDeStockPage() {
             padding:'6px 14px',fontSize:12,fontWeight:600,borderRadius:20,cursor:'pointer',border:'none',
             background:typeFilter===t?(FLUX_COLORS[t]??'var(--accent)')+'33':'rgba(255,255,255,0.04)',
             color:typeFilter===t?(FLUX_COLORS[t]??'var(--accent-light)'):'var(--text-muted)',
-          }}>{t?`${FLUX_ICONS[t]} ${t.replace('_',' ')}`:'Tous'}</button>
+            display: 'inline-flex', alignItems: 'center', gap: 6
+          }}>{t?<>{FLUX_ICONS[t]} {t.replace('_',' ')}</>:'Tous'}</button>
         ))}
       </div>
       {loading?(<div style={{display:'flex',justifyContent:'center',padding:60}}><Spinner size={36}/></div>
-      ):filtered.length===0?(<EmptyState icon="🔄" title="Aucun mouvement" subtitle="Aucun flux ne correspond à vos filtres."/>
+      ):filtered.length===0?(<EmptyState icon={<RefreshCw size={48} />} title="Aucun mouvement" subtitle="Aucun flux ne correspond à vos filtres."/>
       ):(
         <div className="table-wrapper">
           <table className="data-table">
             <thead><tr><th>Date</th><th>Type</th><th>Produit</th><th>Quantité</th><th>Entrepôt</th><th>Note</th><th>Créé par</th></tr></thead>
             <tbody>
-              {filtered.map(f=>(
+              {paginatedData.map(f=>(
                 <tr key={f.id} className="table-row">
                   <td style={{fontSize:12,color:'var(--text-muted)'}}>{new Date(f.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}</td>
-                  <td><span style={{fontSize:12,fontWeight:700,padding:'3px 10px',borderRadius:20,background:`${FLUX_COLORS[f.type]??'#94a3b8'}22`,color:FLUX_COLORS[f.type]??'#94a3b8'}}>{FLUX_ICONS[f.type]} {f.type.replace('_',' ')}</span></td>
+                  <td><span style={{display: 'inline-flex', alignItems: 'center', gap: 6, fontSize:12,fontWeight:700,padding:'3px 10px',borderRadius:20,background:`${FLUX_COLORS[f.type]??'#94a3b8'}22`,color:FLUX_COLORS[f.type]??'#94a3b8'}}>{FLUX_ICONS[f.type]} {f.type.replace('_',' ')}</span></td>
                   <td style={{fontWeight:600,color:'var(--text-primary)'}}>{f.produit?.nom??'—'}</td>
                   <td>
                     {(() => {
@@ -210,10 +230,19 @@ export default function FluxDeStockPage() {
               ))}
             </tbody>
           </table>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 15, padding: '0 10px' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              Page {currentPage} sur {totalPages || 1}
+            </span>
+            <div style={{ display: 'flex', gap: 5 }}>
+              <button className="btn" style={{ padding: '4px 12px', fontSize: 12, borderRadius: 6, border: '1px solid rgba(59,130,246,0.2)', backgroundColor: 'transparent', color: 'var(--text-primary)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }} disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>Précédent</button>
+              <button className="btn" style={{ padding: '4px 12px', fontSize: 12, borderRadius: 6, border: '1px solid rgba(59,130,246,0.2)', backgroundColor: 'transparent', color: 'var(--text-primary)', cursor: currentPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages || totalPages === 0 ? 0.5 : 1 }} disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>Suivant</button>
+            </div>
+          </div>
         </div>
       )}
       <Modal open={showModal} onClose={()=>setShowModal(false)} title="Ajouter un mouvement" size="md">
-        {error&&<div className="alert alert-error" style={{marginBottom:16}}>⚠️ {error}</div>}
+        {error&&<div className="alert alert-error" style={{marginBottom:16, display: 'flex', alignItems: 'center', gap: 8}}><AlertTriangle size={18} /> {error}</div>}
         <div className="field-group"><label className="field-label">Produit *</label>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <input
@@ -229,8 +258,8 @@ export default function FluxDeStockPage() {
                 }
               }}
             />
-            <button className="btn-secondary" onClick={() => void handleBarcodeLookup()}>🔎</button>
-            <button className="btn-secondary" onClick={() => setShowScanner(true)} title="Scanner avec la caméra">📷</button>
+            <button className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => void handleBarcodeLookup()}><Search size={14} /></button>
+            <button className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowScanner(true)} title="Scanner avec la caméra"><Camera size={14} /></button>
           </div>
           <input
             className="field-input"
@@ -259,7 +288,7 @@ export default function FluxDeStockPage() {
           </select></div>
         <div className="field-group"><label className="field-label">Type *</label>
           <select className="field-select" value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))}>
-            {MANUAL.map(t=><option key={t} value={t}>{FLUX_ICONS[t]} {t.replace('_',' ')}</option>)}
+            {MANUAL.map(t=><option key={t} value={t}>{t.replace('_',' ')}</option>)}
           </select></div>
         <div className="field-group"><label className="field-label">Quantité *</label>
           <input className="field-input" type="number" min={1} value={form.quantite} onChange={e=>setForm(f=>({...f,quantite:e.target.value}))} placeholder="Ex: 50"/></div>

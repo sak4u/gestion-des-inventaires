@@ -126,7 +126,7 @@ function AppRouter() {
         path="/commandes"
         element={
           <RequireAuth>
-            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK']}>
+            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK', 'MAGASINIER']}>
               <MainLayout><CommandesPage /></MainLayout>
             </RequireRole>
           </RequireAuth>
@@ -136,7 +136,7 @@ function AppRouter() {
         path="/commandes/:id"
         element={
           <RequireAuth>
-            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK']}>
+            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK', 'MAGASINIER']}>
               <MainLayout><CommandeDetailPage /></MainLayout>
             </RequireRole>
           </RequireAuth>

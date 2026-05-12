@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthLeftPanel } from '../components/AuthLeftPanel';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
+import { AlertTriangle, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -40,14 +41,14 @@ export default function LoginPage() {
             <p>Bienvenue ! Connectez-vous pour accéder à votre espace.</p>
           </div>
 
-          {error && <div className="alert alert-error">⚠️ {error}</div>}
+          {error && <div className="alert alert-error" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={18} /> {error}</div>}
 
           <form onSubmit={handleSubmit} noValidate>
             {/* Email */}
             <div className="form-group">
               <label className="form-label" htmlFor="login-email">Adresse e-mail</label>
               <div className="input-wrapper">
-                <span className="input-icon">✉️</span>
+                <span className="input-icon"><Mail size={18} /></span>
                 <input
                   id="login-email"
                   type="email"
@@ -70,7 +71,7 @@ export default function LoginPage() {
                 </Link>
               </div>
               <div className="input-wrapper">
-                <span className="input-icon">🔒</span>
+                <span className="input-icon"><Lock size={18} /></span>
                 <input
                   id="login-pwd"
                   type={showPwd ? 'text' : 'password'}
@@ -82,7 +83,7 @@ export default function LoginPage() {
                   required
                 />
                 <button type="button" className="input-action" onClick={() => setShowPwd(v => !v)}>
-                  {showPwd ? '🙈' : '👁️'}
+                  {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>

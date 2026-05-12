@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader';
 import { Badge, EmptyState, Spinner } from '../components/ui/index';
 import { commandesApi } from '../api/index';
+import { HelpCircle, Receipt, Mailbox, Check, X } from 'lucide-react';
 
 type CommandeEtat = 'EN_COURS' | 'FERMEE' | 'LIVREE' | 'ANNULEE';
 interface CommandeLine {
@@ -82,7 +83,7 @@ export default function CommandeDetailPage() {
   if (!commande) {
     return (
       <EmptyState
-        icon="❓"
+        icon={<HelpCircle size={48} />}
         title="Commande introuvable"
         subtitle="La commande n'existe pas ou a été supprimée."
       />
@@ -92,7 +93,7 @@ export default function CommandeDetailPage() {
   return (
     <div>
       <PageHeader
-        icon="🧾"
+        icon={<Receipt size={28} />}
         title={`Commande ${commande.id.slice(0, 8)}…`}
         subtitle={`Créée le ${new Date(commande.dateCreation).toLocaleDateString('fr-FR')}`}
         actions={
@@ -150,17 +151,19 @@ export default function CommandeDetailPage() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 className="btn-primary-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 onClick={() => updateEtat('LIVREE')}
                 disabled={updating}
               >
-                ✅ Marquer {commande.type === 'ACHAT' ? 'livrée' : 'expédiée'}
+                <Check size={14} /> Marquer {commande.type === 'ACHAT' ? 'livrée' : 'expédiée'}
               </button>
               <button
                 className="btn-danger"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                 onClick={() => updateEtat('ANNULEE')}
                 disabled={updating}
               >
-                ✖ Annuler commande
+                <X size={14} /> Annuler commande
               </button>
             </div>
           )}
@@ -192,7 +195,7 @@ export default function CommandeDetailPage() {
             </table>
           </div>
         ) : (
-          <EmptyState icon="📭" title="Aucune ligne" subtitle="Cette commande ne contient aucune ligne." />
+          <EmptyState icon={<Mailbox size={48} />} title="Aucune ligne" subtitle="Cette commande ne contient aucune ligne." />
         )}
       </div>
     </div>

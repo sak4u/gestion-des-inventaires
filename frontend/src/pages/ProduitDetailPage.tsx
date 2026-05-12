@@ -5,6 +5,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { produitsApi, fournisseurProduitApi, fournisseursApi } from '../api/index';
 import { Spinner, EmptyState } from '../components/ui/index';
 import PageHeader from '../components/layout/PageHeader';
+import { HelpCircle, Package, AlertTriangle, Factory, Mailbox, Handshake, Edit2, Trash2, History, Plus } from 'lucide-react';
 
 const FLUX_COLORS: Record<string, string> = {
   achat: '#10b981', vente: '#3b82f6', perte: '#ef4444',
@@ -97,7 +98,7 @@ export default function ProduitDetailPage() {
   }, [id]);
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><Spinner size={40} /></div>;
-  if (!produit) return <EmptyState icon="❓" title="Produit introuvable" subtitle="Ce produit n'existe pas ou a été supprimé." />;
+  if (!produit) return <EmptyState icon={<HelpCircle size={48} />} title="Produit introuvable" subtitle="Ce produit n'existe pas ou a été supprimé." />;
 
   const stocks = produit.stockEntrepots ?? [];
   const flux = (produit.fluxDeStocks ?? []).slice(0, 20);
@@ -193,12 +194,12 @@ export default function ProduitDetailPage() {
   return (
     <div>
       <PageHeader
-        icon="📦"
+        icon={<Package size={28} />}
         title={produit.nom}
         subtitle={`Code-barre: ${produit.codeBare} · Catégorie: ${produit.category}`}
         actions={
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-icon" onClick={openCreateLink}>＋ Associer fournisseur</button>
+            <button className="btn-icon" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={openCreateLink}><Plus size={16} /> Associer fournisseur</button>
             <button className="btn-secondary" onClick={() => navigate('/produits')}>← Retour</button>
           </div>
         }
@@ -222,17 +223,17 @@ export default function ProduitDetailPage() {
       </div>
 
       {enAlerte && (
-        <div className="alert alert-error" style={{ marginBottom: 20 }}>
-          ⚠️ Stock critique : {stockTotal} unité(s) restante(s) — seuil d'alerte à {produit.stockAlert}
+        <div className="alert alert-error" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertTriangle size={18} style={{ flexShrink: 0 }} /> Stock critique : {stockTotal} unité(s) restante(s) — seuil d'alerte à {produit.stockAlert}
         </div>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
         {/* Stock par entrepôt */}
         <div className="chart-card">
-          <p className="chart-title">🏭 Stock par entrepôt</p>
+          <p className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Factory size={16} /> Stock par entrepôt</p>
           {stocks.length === 0 ? (
-            <EmptyState icon="📭" title="Aucun stock enregistré" />
+            <EmptyState icon={<Mailbox size={48} />} title="Aucun stock enregistré" />
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -273,11 +274,11 @@ export default function ProduitDetailPage() {
 
         {/* Fournisseurs liés */}
         <div className="chart-card">
-          <p className="chart-title">🤝 Fournisseurs associés</p>
+          <p className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Handshake size={16} /> Fournisseurs associés</p>
           {catalogueLoading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 30 }}><Spinner size={26} /></div>
           ) : !produit.fournisseurProduits?.length ? (
-            <EmptyState icon="📭" title="Aucun fournisseur lié" />
+            <EmptyState icon={<Mailbox size={48} />} title="Aucun fournisseur lié" />
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -295,8 +296,8 @@ export default function ProduitDetailPage() {
                     <td style={{ padding: '10px', fontSize: 13, color: 'var(--text-muted)' }}>{fp.delaiLivraison ?? '—'} j</td>
                     <td style={{ padding: '10px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => openEditLink(fp)}>✏️</button>
-                        <button className="btn-danger" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setDeleteLinkId(fp.id)}>🗑</button>
+                        <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => openEditLink(fp)}><Edit2 size={14} /></button>
+                        <button className="btn-danger" style={{ padding: '5px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setDeleteLinkId(fp.id)}><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -309,9 +310,9 @@ export default function ProduitDetailPage() {
 
       {/* Historique flux */}
       <div className="chart-card">
-        <p className="chart-title">🔄 Historique des mouvements (20 derniers)</p>
+        <p className="chart-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><History size={16} /> Historique des mouvements (20 derniers)</p>
         {flux.length === 0 ? (
-          <EmptyState icon="📭" title="Aucun mouvement enregistré" />
+          <EmptyState icon={<Mailbox size={48} />} title="Aucun mouvement enregistré" />
         ) : (
           <div className="table-wrapper" style={{ border: 'none' }}>
             <table className="data-table">
@@ -349,7 +350,7 @@ export default function ProduitDetailPage() {
         title={editingLink ? 'Modifier fournisseur associé' : 'Associer un fournisseur'}
         size="md"
       >
-        {formError && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠️ {formError}</div>}
+        {formError && <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={18} /> {formError}</div>}
         <div className="field-group">
           <label className="field-label">Fournisseur *</label>
           <select

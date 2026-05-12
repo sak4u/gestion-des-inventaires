@@ -75,7 +75,7 @@ export default function AdminDashboard({ kpis, fluxData, entrepotData, recentFlu
         </div>
       </div>
 
-      <div className="dashboard-sections-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
+      <div className="dashboard-sections-grid">
 
         {/* ── Users list ────────────────────────────────────────────── */}
         <div className="chart-card">

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import PageHeader from '../components/layout/PageHeader';
 import { Badge, EmptyState, Spinner, SearchInput } from '../components/ui/index';
 import { usersApi } from '../api/index';
+import { Users, User as UserIcon, Trash2 } from 'lucide-react';
 
 interface User {
   id: string;
@@ -11,7 +12,7 @@ interface User {
     id?: string;
     name?: string;
   };
-  createdAt?: string;
+  dateCreation?: string;
 }
 
 const ROLE_VARIANT: Record<string, 'blue' | 'green' | 'orange' | 'red' | 'purple' | 'gray'> = {
@@ -75,7 +76,7 @@ export default function UtilisateursPage() {
   return (
     <div>
       <PageHeader
-        icon="👥"
+        icon={<Users size={28} />}
         title="Utilisateurs"
         subtitle={`${filteredUsers.length} / ${users.length} utilisateur(s)`}
       />
@@ -88,7 +89,7 @@ export default function UtilisateursPage() {
           <Spinner size={36} />
         </div>
       ) : filteredUsers.length === 0 ? (
-        <EmptyState icon="👤" title="Aucun utilisateur" subtitle="La liste des utilisateurs est vide." />
+        <EmptyState icon={<UserIcon size={48} />} title="Aucun utilisateur" subtitle="La liste des utilisateurs est vide." />
       ) : (
         <div className="table-wrapper">
           <table className="data-table">
@@ -112,8 +113,8 @@ export default function UtilisateursPage() {
                       <Badge variant={ROLE_VARIANT[role] ?? 'gray'}>{role}</Badge>
                     </td>
                     <td>
-                      {user.createdAt
-                        ? new Date(user.createdAt).toLocaleDateString('fr-FR')
+                      {user.dateCreation
+                        ? new Date(user.dateCreation).toLocaleDateString('fr-FR')
                         : '—'}
                     </td>
                     <td>
@@ -131,11 +132,11 @@ export default function UtilisateursPage() {
                         </select>
                         <button
                           className="btn-danger"
-                          style={{ padding: '5px 10px', fontSize: 12 }}
+                          style={{ padding: '5px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                           disabled={actionId === user.id}
                           onClick={() => removeUser(user.id)}
                         >
-                          🗑 Supprimer
+                          <Trash2 size={14} /> Supprimer
                         </button>
                       </div>
                     </td>

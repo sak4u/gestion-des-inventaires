@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader';
 import { EmptyState, Spinner, Badge, SearchInput } from '../components/ui/index';
 import { entrepotsApi, fluxDeStockApi } from '../api/index';
+import { Factory, Mailbox } from 'lucide-react';
 
 interface Entrepot {
   id: string;
@@ -133,7 +134,7 @@ export default function EntrepotDetailPage() {
   return (
     <div>
       <PageHeader
-        icon="🏭"
+        icon={<Factory size={28} />}
         title={entrepot?.nom ?? 'Détail entrepôt'}
         subtitle={entrepot?.adresse ?? 'Adresse non renseignée'}
         actions={
@@ -168,7 +169,7 @@ export default function EntrepotDetailPage() {
 
           {stocks.length === 0 ? (
             <EmptyState
-              icon="📭"
+              icon={<Mailbox size={48} />}
               title="Aucun stock enregistré"
               subtitle="Cet entrepôt ne contient pas encore de produits."
             />

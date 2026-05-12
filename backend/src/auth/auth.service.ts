@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, OnModuleInit, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, OnModuleInit, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -20,9 +20,10 @@ export class AuthService implements OnModuleInit {
     const count = await this.prisma.role.count();
   if (count < 4) {
             const roles = [
-              { name: 'ADMINISTRATEUR', description: 'Administrateur principal' },
-              { name: 'GESTIONNAIRE_STOCK', description: 'Gestionnaire de stock' },
-              { name: 'RESPONSABLE_APPRO', description: "Responsable d'approvisionnement " },
+              { name: 'ADMIN', description: 'Administrateur principal' },
+              { name: 'RESPONSABLE_STOCK', description: 'Manager de stock' },
+              { name: 'MAGASINIER', description: 'Employé entrepôt / Magasinier' },
+              { name: 'ACHAT', description: "Gestionnaire Achat & Fournisseurs" },
             ];
 
             for (const role of roles) {
@@ -140,5 +141,54 @@ export class AuthService implements OnModuleInit {
     });
 
     return { message: 'Mot de passe réinitialisé avec succès' };
+  }
+
+  // ── Gestion des utilisateurs (admin) ─────────────────────────────────────────
+
+  async getUsers() {
+    return this.prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        dateCreation: true,
+        role: { select: { id: true, name: true } },
+      },
+      orderBy: { dateCreation: 'desc' },
+    });
+  }
+
+  async updateUser(userId: string, data: { roleName?: string }) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException(`Utilisateur ${userId} introuvable`);
+
+    if (data.roleName) {
+      const role = await this.prisma.role.findUnique({ where: { name: data.roleName } });
+      if (!role) throw new BadRequestException(`Rôle '${data.roleName}' invalide`);
+      return this.prisma.user.update({
+        where: { id: userId },
+        data: { roleId: role.id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          dateCreation: true,
+          role: { select: { id: true, name: true } },
+        },
+      });
+    }
+
+    return user;
+  }
+
+  async deleteUser(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException(`Utilisateur ${userId} introuvable`);
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { message: 'Utilisateur supprimé avec succès' };
+  }
+
+  async getRoles() {
+    return this.prisma.role.findMany({ select: { id: true, name: true, description: true } });
   }
 }

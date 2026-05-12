@@ -4,6 +4,7 @@ import PageHeader from '../components/layout/PageHeader';
 import { EmptyState, Spinner, BarcodeScanner } from '../components/ui/index';
 import { commandeLignesApi, commandesApi, entrepotsApi, fournisseursApi, produitsApi } from '../api/index';
 import { useAuth } from '../contexts/AuthContext';
+import { Plus, AlertTriangle, Search, Camera, Trash2 } from 'lucide-react';
 
 interface OptionItem {
   id: string;
@@ -192,7 +193,7 @@ export default function NouvelleCommandePage() {
   return (
     <div>
       <PageHeader
-        icon="➕"
+        icon={<Plus size={28} />}
         title="Nouvelle commande"
         subtitle={type === 'ACHAT' ? "Création d'une commande d'achat" : "Création d'une commande de vente"}
         actions={
@@ -204,15 +205,15 @@ export default function NouvelleCommandePage() {
 
       {(!fournisseurs.length || !entrepots.length || !produits.length) && (
         <EmptyState
-          icon="⚠️"
+          icon={<AlertTriangle size={48} />}
           title="Donnees insuffisantes"
           subtitle="Ajoutez au moins un fournisseur, un entrepot et un produit avant de creer une commande."
         />
       )}
 
       {error && (
-        <div className="alert alert-error" style={{ marginBottom: 16 }}>
-          ⚠️ {error}
+        <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <AlertTriangle size={18} /> {error}
         </div>
       )}
 
@@ -230,8 +231,8 @@ export default function NouvelleCommandePage() {
                 if (newType === 'VENTE') setFournisseurId('');
               }}
             >
-              <option value="ACHAT">📦 ACHAT</option>
-              <option value="VENTE">🛒 VENTE</option>
+              <option value="ACHAT">ACHAT</option>
+              <option value="VENTE">VENTE</option>
             </select>
           </div>
           {type === 'ACHAT' && (
@@ -328,10 +329,10 @@ export default function NouvelleCommandePage() {
                       />
                       <button
                         className="btn-secondary"
-                        style={{ padding: '5px 10px', fontSize: 12 }}
+                        style={{ padding: '5px 10px', fontSize: 12, display: 'flex', alignItems: 'center' }}
                         onClick={() => void handleBarcodeLookup(index)}
                       >
-                        🔎
+                        <Search size={14} />
                       </button>
                       <button
                         className="btn-secondary"
@@ -342,11 +343,11 @@ export default function NouvelleCommandePage() {
                       </button>
                       <button
                         className="btn-secondary"
-                        style={{ padding: '5px 10px', fontSize: 12 }}
+                        style={{ padding: '5px 10px', fontSize: 12, display: 'flex', alignItems: 'center' }}
                         onClick={() => setScannerIndex(index)}
                         title="Scanner avec la caméra"
                       >
-                        📷
+                        <Camera size={14} />
                       </button>
                     </div>
                   </td>
@@ -379,11 +380,11 @@ export default function NouvelleCommandePage() {
                   <td>
                     <button
                       className="btn-danger"
-                      style={{ padding: '5px 10px', fontSize: 12 }}
+                      style={{ padding: '5px 10px', fontSize: 12, display: 'flex', alignItems: 'center' }}
                       onClick={() => removeLigne(index)}
                       disabled={lignes.length === 1}
                     >
-                      🗑
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>

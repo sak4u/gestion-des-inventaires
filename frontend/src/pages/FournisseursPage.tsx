@@ -5,6 +5,7 @@ import { EmptyState, Spinner, SearchInput } from '../components/ui/index';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { fournisseursApi } from '../api/index';
+import { Handshake, Eye, Edit2, Mail, Trash2, AlertTriangle, Plus } from 'lucide-react';
 
 interface Fournisseur {
   id: string;
@@ -89,8 +90,8 @@ export default function FournisseursPage() {
 
   return (
     <div>
-      <PageHeader icon="🤝" title="Fournisseurs" subtitle={`${list.length} fournisseur(s) référencé(s)`}
-        actions={<button className="btn-icon" onClick={openCreate} id="btn-nouveau-fournisseur">＋ Nouveau fournisseur</button>}
+      <PageHeader icon={<Handshake size={28} />} title="Fournisseurs" subtitle={`${list.length} fournisseur(s) référencé(s)`}
+        actions={<button className="btn-icon" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={openCreate} id="btn-nouveau-fournisseur"><Plus size={16} /> Nouveau fournisseur</button>}
       />
 
       <div style={{ marginBottom: 20 }}>
@@ -100,7 +101,7 @@ export default function FournisseursPage() {
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon="🤝" title="Aucun fournisseur" subtitle="Ajoutez votre premier fournisseur." />
+        <EmptyState icon={<Handshake size={48} />} title="Aucun fournisseur" subtitle="Ajoutez votre premier fournisseur." />
       ) : (
         <div className="table-wrapper">
           <table className="data-table">
@@ -123,12 +124,12 @@ export default function FournisseursPage() {
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => navigate(`/fournisseurs/${f.id}`)}>👁</button>
-                      <button className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => openEdit(f)}>✏️</button>
+                      <button className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => navigate(`/fournisseurs/${f.id}`)}><Eye size={14} /></button>
+                      <button className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => openEdit(f)}><Edit2 size={14} /></button>
                       {f.email && (
-                        <a href={`mailto:${f.email}`} className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }} title="Envoyer email">✉️</a>
+                        <a href={`mailto:${f.email}`} className="btn-secondary" style={{ padding: '5px 12px', fontSize: 12, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} title="Envoyer email"><Mail size={14} /></a>
                       )}
-                      <button className="btn-danger" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => setDeleteId(f.id)}>🗑</button>
+                      <button className="btn-danger" style={{ padding: '5px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setDeleteId(f.id)}><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -139,7 +140,7 @@ export default function FournisseursPage() {
       )}
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editTarget ? `Modifier — ${editTarget.nom}` : 'Nouveau fournisseur'} size="md">
-        {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠️ {error}</div>}
+        {error && <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={18} /> {error}</div>}
         {(['nom', 'email', 'telephone', 'adresse'] as (keyof FourForm)[]).map(k => (
           <div key={k} className="field-group">
             <label className="field-label">{k.charAt(0).toUpperCase() + k.slice(1)}{k === 'nom' ? ' *' : ''}</label>

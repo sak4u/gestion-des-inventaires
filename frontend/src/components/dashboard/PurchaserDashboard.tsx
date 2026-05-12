@@ -51,7 +51,7 @@ export default function PurchaserDashboard({ kpis, propositions, fournisseurs, c
         <KpiCard icon="💰" label="Dépenses ce mois"    value={`${spend.toFixed(2)} DT`}        color="blue"   />
       </div>
 
-      <div className="dashboard-sections-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
+      <div className="dashboard-sections-grid">
 
         {/* ── Top suppliers ────────────────────────────────────────── */}
         <div className="chart-card">

@@ -47,6 +47,15 @@ export default function BarcodeScanner({ open, onClose, onScan, title = 'Scanner
         const reader = new BrowserMultiFormatReader();
         readerRef.current = reader;
 
+        // Force browser to ask for camera permission before listing devices
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          stream.getTracks().forEach((t) => t.stop());
+        } catch (err: any) {
+          setError('Permission refusée ou caméra bloquée par le navigateur.');
+          return;
+        }
+
         const devices = await reader.listVideoInputDevices();
         if (cancelled) return;
 

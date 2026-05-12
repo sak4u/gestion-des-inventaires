@@ -3,6 +3,7 @@ import PageHeader from '../components/layout/PageHeader';
 import { EmptyState, Spinner, Badge } from '../components/ui/index';
 import Modal from '../components/ui/Modal';
 import { propositionsApi, entrepotsApi } from '../api/index';
+import { Bot, Clock, CheckCircle, XCircle, Check, X, AlertTriangle } from 'lucide-react';
 
 const STATUT_BADGE: Record<string, { label: string; v: 'orange' | 'green' | 'red' }> = {
   EN_ATTENTE: { label: 'En attente', v: 'orange' },
@@ -53,20 +54,25 @@ export default function PropositionsPage() {
 
   return (
     <div>
-      <PageHeader icon="🤖" title="Propositions IA" subtitle="Suggestions de réapprovisionnement générées automatiquement" />
+      <PageHeader icon={<Bot size={28} />} title="Propositions IA" subtitle="Suggestions de réapprovisionnement générées automatiquement" />
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {[['', 'Toutes'], ['EN_ATTENTE', '⏳ En attente'], ['ACCEPTEE', '✅ Acceptées'], ['REFUSEE', '❌ Refusées']].map(([v, l]) => (
+        {[
+          { v: '', l: 'Toutes' },
+          { v: 'EN_ATTENTE', l: <><Clock size={14} /> En attente</> },
+          { v: 'ACCEPTEE', l: <><CheckCircle size={14} /> Acceptées</> },
+          { v: 'REFUSEE', l: <><XCircle size={14} /> Refusées</> }
+        ].map(({v, l}) => (
           <button key={v} onClick={() => setStatut(v)}
             className={statutFilter === v ? 'btn-primary-sm' : 'btn-secondary'}
-            style={{ padding: '7px 14px', fontSize: 13 }}>{l}</button>
+            style={{ padding: '7px 14px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>{l}</button>
         ))}
       </div>
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : props.length === 0 ? (
-        <EmptyState icon="🤖" title="Aucune proposition" subtitle="L'IA génère des propositions lors des analyses de stock." />
+        <EmptyState icon={<Bot size={48} />} title="Aucune proposition" subtitle="L'IA génère des propositions lors des analyses de stock." />
       ) : (
         <div className="table-wrapper">
           <table className="data-table">
@@ -98,8 +104,8 @@ export default function PropositionsPage() {
                     <td>
                       {p.statut === 'EN_ATTENTE' && (
                         <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn-primary-sm" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => openAccept(p)}>✅ Accepter</button>
-                          <button className="btn-danger" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => handleRefuse(p.id)}>❌ Refuser</button>
+                          <button className="btn-primary-sm" style={{ padding: '5px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => openAccept(p)}><Check size={14} /> Accepter</button>
+                          <button className="btn-danger" style={{ padding: '5px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => handleRefuse(p.id)}><X size={14} /> Refuser</button>
                         </div>
                       )}
                     </td>
@@ -112,7 +118,7 @@ export default function PropositionsPage() {
       )}
 
       <Modal open={!!acceptModal} onClose={() => setAcceptModal(null)} title="Accepter la proposition" size="sm">
-        {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠️ {error}</div>}
+        {error && <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={18} /> {error}</div>}
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 16 }}>
           Accepter cette proposition créera automatiquement une commande de <strong style={{ color: 'var(--text-primary)' }}>{acceptModal?.quantiteProposee}</strong> unités de <strong style={{ color: 'var(--text-primary)' }}>{acceptModal?.produit?.nom}</strong> auprès de <strong style={{ color: 'var(--text-primary)' }}>{acceptModal?.fournisseur?.nom}</strong>.
         </p>
@@ -125,7 +131,7 @@ export default function PropositionsPage() {
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
           <button className="btn-secondary" onClick={() => setAcceptModal(null)} disabled={acting}>Annuler</button>
-          <button className="btn-primary-sm" onClick={handleAccept} disabled={acting}>{acting ? <Spinner size={16} /> : '✅ Confirmer'}</button>
+          <button className="btn-primary-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={handleAccept} disabled={acting}>{acting ? <Spinner size={16} /> : <><Check size={16} /> Confirmer</>}</button>
         </div>
       </Modal>
     </div>

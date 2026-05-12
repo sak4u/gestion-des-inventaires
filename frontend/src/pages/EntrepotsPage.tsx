@@ -5,6 +5,7 @@ import { EmptyState, Spinner } from '../components/ui/index';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { entrepotsApi } from '../api/index';
+import { Factory, Eye, Edit2, Trash2, Plus, AlertTriangle } from 'lucide-react';
 
 interface EntrepotStockItem {
   quantite: number;
@@ -89,14 +90,14 @@ export default function EntrepotsPage() {
 
   return (
     <div>
-      <PageHeader icon="🏭" title="Entrepôts" subtitle={`${entrepots.length} entrepôt(s) configuré(s)`}
-        actions={<button className="btn-icon" onClick={openCreate} id="btn-nouvel-entrepot">＋ Nouvel entrepôt</button>}
+      <PageHeader icon={<Factory size={28} />} title="Entrepôts" subtitle={`${entrepots.length} entrepôt(s) configuré(s)`}
+        actions={<button className="btn-icon" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={openCreate} id="btn-nouvel-entrepot"><Plus size={16} /> Nouvel entrepôt</button>}
       />
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : entrepots.length === 0 ? (
-        <EmptyState icon="🏭" title="Aucun entrepôt" subtitle="Créez votre premier entrepôt pour commencer." />
+        <EmptyState icon={<Factory size={48} />} title="Aucun entrepôt" subtitle="Créez votre premier entrepôt pour commencer." />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 18 }}>
           {entrepots.map(e => {
@@ -109,9 +110,9 @@ export default function EntrepotsPage() {
                     <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{e.adresse ?? 'Adresse non renseignée'}</p>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => navigate(`/entrepots/${e.id}`)} title="Voir stock">👁</button>
-                    <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => openEdit(e)} title="Modifier">✏️</button>
-                    <button className="btn-danger"    style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setDeleteId(e.id)} title="Supprimer">🗑</button>
+                    <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => navigate(`/entrepots/${e.id}`)} title="Voir stock"><Eye size={14} /></button>
+                    <button className="btn-secondary" style={{ padding: '5px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => openEdit(e)} title="Modifier"><Edit2 size={14} /></button>
+                    <button className="btn-danger"    style={{ padding: '5px 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setDeleteId(e.id)} title="Supprimer"><Trash2 size={14} /></button>
                   </div>
                 </div>
 
@@ -142,7 +143,7 @@ export default function EntrepotsPage() {
       )}
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editTarget ? `Modifier — ${editTarget.nom}` : 'Nouvel entrepôt'} size="sm">
-        {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>⚠️ {error}</div>}
+        {error && <div className="alert alert-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={18} /> {error}</div>}
         <div className="field-group"><label className="field-label">Nom *</label>
           <input className="field-input" value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} placeholder="Ex: Entrepôt Central" /></div>
         <div className="field-group"><label className="field-label">Adresse</label>
