@@ -16,6 +16,8 @@ export interface FluxPoint {
 export interface EntrepotStock {
   nom: string;
   valeur: number;
+  capaciteMax?: number | null;
+  stockTotalEntrepot?: number;
 }
 
 export interface Proposition {

@@ -82,15 +82,45 @@ export default function StockManagerDashboard({ kpis, propositions, entrepots }:
               Aucune donnée d'entrepôt disponible.
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {entrepots.map((e) => (
-                <div key={e.nom}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13 }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{e.nom}</span>
-                    <span style={{ color: 'var(--success)', fontWeight: 700 }}>{e.valeur.toFixed(0)} DT</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {entrepots.map((e) => {
+                const pct = (e as any).capaciteMax && (e as any).capaciteMax > 0
+                  ? Math.min(((e as any).stockTotalEntrepot ?? 0) / (e as any).capaciteMax * 100, 100)
+                  : null;
+                const barColor = pct === null ? 'var(--accent-light)'
+                  : pct >= 90 ? '#ef4444'
+                  : pct >= 70 ? '#f97316'
+                  : '#22c55e';
+                const statusLabel = pct === null ? null
+                  : pct >= 90 ? '🔴 Plein'
+                  : pct >= 70 ? '⚠️ Presque plein'
+                  : null;
+                return (
+                  <div key={e.nom}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {e.nom}
+                        {statusLabel && <span style={{ fontSize: 11, fontWeight: 700, color: pct! >= 90 ? '#ef4444' : '#f97316' }}>{statusLabel}</span>}
+                      </span>
+                      <span style={{ color: 'var(--success)', fontWeight: 700 }}>
+                        {e.valeur.toFixed(0)} DT
+                        {pct !== null && <span style={{ color: barColor, fontWeight: 700, marginLeft: 8 }}>({pct.toFixed(0)}%)</span>}
+                      </span>
+                    </div>
+                    {pct !== null && (
+                      <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${pct}%`,
+                          background: barColor,
+                          borderRadius: 99,
+                          transition: 'width 0.6s ease',
+                        }} />
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

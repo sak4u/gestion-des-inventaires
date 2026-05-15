@@ -39,6 +39,13 @@ export default function PropositionsPage() {
     setEntrepots(res.data ?? []);
   };
 
+  /** Calcule le taux de remplissage d'un entrepôt (0–100). Retourne null si pas de capaciteMax. */
+  const getRemplissage = (e: any): number | null => {
+    if (!e.capaciteMax || e.capaciteMax <= 0) return null;
+    const stock = e.stockTotalEntrepot ?? e.stockEntrepots?.reduce((s: number, se: any) => s + se.quantite, 0) ?? 0;
+    return Math.min((stock / e.capaciteMax) * 100, 100);
+  };
+
   const handleAccept = async () => {
     if (!entrepotId) { setError("Veuillez sélectionner un entrepôt de destination."); return; }
     setActing(true);
@@ -124,10 +131,56 @@ export default function PropositionsPage() {
         </p>
         <div className="field-group">
           <label className="field-label">Entrepôt de destination *</label>
-          <select className="field-select" value={entrepotId} onChange={e => setEntrepotId(e.target.value)}>
-            <option value="">Sélectionner un entrepôt…</option>
-            {entrepots.map((e: any) => <option key={e.id} value={e.id}>{e.nom}</option>)}
-          </select>
+          {(() => {
+            const available = entrepots.filter((e: any) => {
+              const r = getRemplissage(e);
+              return r === null || r < 90;
+            });
+            const allFull = entrepots.length > 0 && available.length === 0;
+            return (
+              <>
+                {allFull && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, marginBottom: 12, fontSize: 13, color: '#f87171' }}>
+                    <AlertTriangle size={16} />
+                    Tous les entrepôts sont pleins (≥ 90%). Veuillez libérer de l'espace avant d'accepter.
+                  </div>
+                )}
+                <select
+                  className="field-select"
+                  value={entrepotId}
+                  onChange={e => setEntrepotId(e.target.value)}
+                  disabled={allFull}
+                >
+                  <option value="">Sélectionner un entrepôt…</option>
+                  {entrepots.map((e: any) => {
+                    const r = getRemplissage(e);
+                    const isFull = r !== null && r >= 90;
+                    const isWarn = r !== null && r >= 70 && r < 90;
+                    const label = r !== null
+                      ? `${e.nom} ${isFull ? '🔴 Plein' : isWarn ? `⚠️ ${r.toFixed(0)}% utilisé` : `✅ ${r.toFixed(0)}% utilisé`}`
+                      : `${e.nom} (capacité illimitée)`;
+                    return (
+                      <option key={e.id} value={e.id} disabled={isFull}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+                {entrepotId && (() => {
+                  const sel = entrepots.find((e: any) => e.id === entrepotId);
+                  const r = sel ? getRemplissage(sel) : null;
+                  if (r !== null && r >= 70) {
+                    return (
+                      <p style={{ marginTop: 8, fontSize: 12, color: '#fb923c', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <AlertTriangle size={13} /> Cet entrepôt est à {r.toFixed(0)}% de sa capacité — choisissez-en un autre si possible.
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
+              </>
+            );
+          })()}
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
           <button className="btn-secondary" onClick={() => setAcceptModal(null)} disabled={acting}>Annuler</button>

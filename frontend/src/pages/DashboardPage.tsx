@@ -103,6 +103,8 @@ export default function DashboardPage() {
 
         setEntrepotData(entrepots.map((e: any) => ({
           nom: e.nom,
+          capaciteMax: e.capaciteMax ?? null,
+          stockTotalEntrepot: e.stockTotalEntrepot ?? 0,
           valeur: (e.stockEntrepots ?? []).reduce((s: number, se: any) => {
             const prix = se.produit?.prixAchatMoyen ?? 0;
             return s + (se.quantite * prix);

@@ -7,14 +7,22 @@ export default defineConfig({
   server: {
     host: true,      // expose on LAN → accessible from smartphone
     port: 5173,
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      clientPort: 5173,
+    },
     proxy: {
       '/api': {
-        target: 'http://192.168.1.19:3000',
+        target: 'http://localhost:3000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
         secure: false,
+      },
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        ws: true,
       }
     }
   },
 })
-
