@@ -7,6 +7,8 @@ pipeline {
         BACKEND_DIR     = "${env.WORKSPACE}\\backend"
         API_REPORTS_DIR = "${env.WORKSPACE}\\backend\\test\\reports"
         NODE_ENV        = 'test'
+        DB_URL_TEST     = credentials('DB_URL_TEST')
+        JWT_SECRET_TEST = credentials('JWT_SECRET_TEST')
     }
     options {
         buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
@@ -44,6 +46,28 @@ pipeline {
             post {
                 success { echo '\u001B[32m  \u2714 Environment Check\u001B[0m' }
                 failure { echo '\u001B[31m  \u2718 Environment Check\u001B[0m' }
+            }
+        }
+
+        stage('Prepare Environment') {
+            steps {
+                bat """
+                    cd /d "%BACKEND_DIR%"
+                    (
+                        echo DATABASE_URL=%DB_URL_TEST%
+                        echo JWT_SECRET=%JWT_SECRET_TEST%
+                        echo JWT_EXPIRES_IN=1h
+                        echo MAIL_HOST=localhost
+                        echo MAIL_PORT=1025
+                        echo MAIL_USER=
+                        echo MAIL_PASS=
+                        echo MAIL_FROM=test@test.com
+                    ) > .env.test
+                """
+            }
+            post {
+                success { echo '\u001B[32m  \u2714 Prepare Environment\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 Prepare Environment — failed to create .env.test\u001B[0m' }
             }
         }
 
