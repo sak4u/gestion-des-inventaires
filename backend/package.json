@@ -68,6 +68,7 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
     "axios": "^1.17.0",
+    "dotenv": "^17.4.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
@@ -101,17 +102,24 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "coverageReporters": ["lcov", "text", "cobertura"],
+    "coverageReporters": [
+      "lcov",
+      "text",
+      "cobertura"
+    ],
     "testEnvironment": "node",
     "reporters": [
       "default",
-      ["jest-junit", {
-        "outputDirectory": "test/reports",
-        "outputName": "junit-unit.xml",
-        "classNameTemplate": "{classname}",
-        "titleTemplate": "{title}",
-        "ancestorSeparator": " > "
-      }]
+      [
+        "jest-junit",
+        {
+          "outputDirectory": "test/reports",
+          "outputName": "junit-unit.xml",
+          "classNameTemplate": "{classname}",
+          "titleTemplate": "{title}",
+          "ancestorSeparator": " > "
+        }
+      ]
     ]
   },
   "prisma": {

@@ -1,4 +1,10 @@
+import * as dotenv from 'dotenv';
+import * as path from 'path';
 import { execSync } from 'child_process';
+
+// Charge .env.test AVANT toute initialisation de module NestJS
+// Ceci est nécessaire car Jest ne charge pas les variables d'env automatiquement
+dotenv.config({ path: path.resolve(__dirname, '../.env.test') });
 
 // Applique les migrations sur la DB de test avant l'exécution de tous les tests
 beforeAll(async () => {
