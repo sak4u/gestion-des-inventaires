@@ -109,6 +109,14 @@ pipeline {
             steps {
                 bat """
                     cd /d "%BACKEND_DIR%"
+
+                    :: Appliquer le schema Prisma sur la DB de test
+                    npx prisma db push --force-reset --accept-data-loss
+
+                    :: Injecter les donnees de test (users, produits, fournisseurs, entrepots...)
+                    npx ts-node prisma/seed.ts
+
+                    :: Lancer les tests E2E Supertest
                     set JEST_JUNIT_OUTPUT_DIR=test\\reports
                     set JEST_JUNIT_OUTPUT_NAME=junit-e2e-supertest.xml
                     npm run test:e2e:ci
