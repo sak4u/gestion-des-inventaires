@@ -51,18 +51,7 @@ pipeline {
 
         stage('Prepare Environment') {
             steps {
-                bat """
-                    cd /d "%BACKEND_DIR%"
-                    (
-                        echo DATABASE_URL=%DB_URL_TEST%
-                        echo JWT_SECRET=%JWT_SECRET_TEST%
-                        echo JWT_EXPIRES_IN=1h
-                        echo MAIL_HOST=localhost
-                        echo MAIL_PORT=1025
-                        echo MAIL_USER=
-                        echo MAIL_PASS=
-                        echo MAIL_FROM=test@test.com
-                    ) > .env.test
+                bat """cd /d "%BACKEND_DIR%" && (echo DATABASE_URL=%DB_URL_TEST%)>".env.test" && (echo JWT_SECRET=%JWT_SECRET_TEST%)>>".env.test" && (echo JWT_EXPIRES_IN=1h)>>".env.test" && (echo MAIL_HOST=localhost)>>".env.test" && (echo MAIL_PORT=1025)>>".env.test" && (echo MAIL_USER=)>>".env.test" && (echo MAIL_PASS=)>>".env.test" && (echo MAIL_FROM=test@test.com)>>".env.test"
                 """
             }
             post {
