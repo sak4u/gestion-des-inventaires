@@ -51,7 +51,7 @@ pipeline {
             steps {
                 bat """
                     cd /d "%BACKEND_DIR%"
-                    npm install --prefer-offline > nul 2>&1
+                    npm install --prefer-offline 2>&1
                     if not exist "test\\reports" mkdir "test\\reports" > nul 2>&1
                 """
             }
@@ -67,7 +67,7 @@ pipeline {
                     cd /d "%BACKEND_DIR%"
                     set JEST_JUNIT_OUTPUT_DIR=test\\reports
                     set JEST_JUNIT_OUTPUT_NAME=junit-unit.xml
-                    npm run test:ci > nul 2>&1
+                    npm run test:ci
                 """
             }
             post {
@@ -98,7 +98,7 @@ pipeline {
                     cd /d "%BACKEND_DIR%"
                     set JEST_JUNIT_OUTPUT_DIR=test\\reports
                     set JEST_JUNIT_OUTPUT_NAME=junit-e2e-supertest.xml
-                    npm run test:e2e:ci > nul 2>&1
+                    npm run test:e2e:ci
                 """
             }
             post {
@@ -120,7 +120,7 @@ pipeline {
             steps {
                 bat """
                     cd /d "%BACKEND_DIR%"
-                    npm run test:bdd:ci > nul 2>&1
+                    npm run test:bdd:ci
                 """
             }
             post {
@@ -143,7 +143,7 @@ pipeline {
                 bat """
                     cd /d "%BACKEND_DIR%"
                     if not exist "test\\reports" mkdir "test\\reports" > nul 2>&1
-                    npm run test:postman > nul 2>&1
+                    npm run test:postman
                 """
             }
             post {

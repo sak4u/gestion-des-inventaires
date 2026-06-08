@@ -3,7 +3,7 @@ pipeline {
     environment {
         SELENIUM_DIR   = "${env.WORKSPACE}\\selenium-tests"
         REPORTS_DIR    = "${env.WORKSPACE}\\selenium-tests\\reports"
-        PYTHON         = "C:\\python313\\python.exe"
+        PYTHON         = "python"
         BACKEND_URL    = 'http://localhost:3000'
         FRONTEND_URL   = 'http://localhost:5173'
     }
@@ -104,23 +104,23 @@ pipeline {
                     allure([
                         includeProperties: true,
                         jdk:               '',
-                        results:           [[path: 'C:\\Users\\mohamed sakly\\Desktop\\Gestion des inventaires\\selenium-tests\\reports\\allure-results']]
+                        results:           [[path: "${env.WORKSPACE}\\selenium-tests\\reports\\allure-results"]]
                     ])
                     junit(
-                        testResults:       'C:\\Users\\mohamed sakly\\Desktop\\Gestion des inventaires\\selenium-tests\\reports\\junit-e2e.xml',
+                        testResults:       "${env.WORKSPACE}\\selenium-tests\\reports\\junit-e2e.xml",
                         allowEmptyResults: true
                     )
                     publishHTML([
                         allowMissing:          true,
                         alwaysLinkToLastBuild: true,
                         keepAll:               true,
-                        reportDir:             'C:\\Users\\mohamed sakly\\Desktop\\Gestion des inventaires\\selenium-tests\\reports',
+                        reportDir:             "${env.WORKSPACE}\\selenium-tests\\reports",
                         reportFiles:           'report.html',
                         reportName:            'Rapport HTML — Tests Selenium',
                         reportTitles:          'Selenium E2E Report'
                     ])
                     archiveArtifacts(
-                        artifacts:         'C:\\Users\\mohamed sakly\\Desktop\\Gestion des inventaires\\selenium-tests\\reports\\screenshots\\*.png',
+                        artifacts:         "${env.WORKSPACE}\\selenium-tests\\reports\\screenshots\\*.png",
                         allowEmptyArchive: true
                     )
                 }
