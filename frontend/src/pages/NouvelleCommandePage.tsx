@@ -41,6 +41,7 @@ export default function NouvelleCommandePage() {
     { produitId: '', codeBare: '', quantite: 1, prixUnitaire: 0 },
   ]);
   const [scannerIndex, setScannerIndex] = useState<number | null>(null);
+  const [types, setTypes] = useState<string[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -59,6 +60,10 @@ export default function NouvelleCommandePage() {
       }
     };
     void load();
+  }, []);
+
+  useEffect(() => {
+    commandesApi.enums().then(res => setTypes(res.data?.types ?? [])).catch(() => {});
   }, []);
 
   const setLigne = (index: number, patch: Partial<LigneForm>) => {
@@ -231,8 +236,7 @@ export default function NouvelleCommandePage() {
                 if (newType === 'VENTE') setFournisseurId('');
               }}
             >
-              <option value="ACHAT">ACHAT</option>
-              <option value="VENTE">VENTE</option>
+              {types.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           {type === 'ACHAT' && (

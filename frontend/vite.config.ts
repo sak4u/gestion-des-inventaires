@@ -8,8 +8,8 @@ export default defineConfig({
     host: true,      // expose on LAN → accessible from smartphone
     port: 5173,
     hmr: {
-      protocol: 'ws',
       host: 'localhost',
+      port: 5173,
       clientPort: 5173,
     },
     proxy: {

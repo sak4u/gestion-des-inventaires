@@ -7,8 +7,8 @@ import { AlertTriangle, Mail, Lock, Eye, EyeOff, Key, PartyPopper, Check } from 
 type Step = 'email' | 'code' | 'password' | 'done';
 
 const STEPS: { key: Step; label: string }[] = [
-  { key: 'email',    label: 'Email' },
-  { key: 'code',     label: 'Code' },
+  { key: 'email', label: 'Email' },
+  { key: 'code', label: 'Code' },
   { key: 'password', label: 'Nouveau MDP' },
 ];
 
@@ -37,13 +37,13 @@ function StepIndicator({ current }: { current: Step }) {
 }
 
 export default function ForgotPasswordPage() {
-  const [step, setStep]       = useState<Step>('email');
-  const [email, setEmail]     = useState('');
-  const [code, setCode]       = useState('');
-  const [newPwd, setNewPwd]   = useState('');
+  const [step, setStep] = useState<Step>('email');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [newPwd, setNewPwd] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
 
   // Step 1 — send reset code
   const handleSendCode = async (e: React.FormEvent) => {
@@ -93,8 +93,8 @@ export default function ForgotPasswordPage() {
               <div className="auth-card-header">
                 <h2>Mot de passe oublié</h2>
                 <p>
-                  {step === 'email'    && 'Entrez votre email pour recevoir un code de réinitialisation.'}
-                  {step === 'code'     && `Un code à 6 chiffres a été envoyé à ${email}.`}
+                  {step === 'email' && 'Entrez votre email pour recevoir un code de réinitialisation.'}
+                  {step === 'code' && `Un code à 6 chiffres a été envoyé à ${email}.`}
                   {step === 'password' && 'Définissez votre nouveau mot de passe.'}
                 </p>
               </div>

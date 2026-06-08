@@ -18,11 +18,6 @@ async function main() {
     create: { name: 'RESPONSABLE_STOCK', description: 'Manager de stock' },
   });
   await prisma.role.upsert({
-    where: { name: 'MAGASINIER' },
-    update: {},
-    create: { name: 'MAGASINIER', description: 'Employé entrepôt / Magasinier' },
-  });
-  await prisma.role.upsert({
     where: { name: 'ACHAT' },
     update: {},
     create: { name: 'ACHAT', description: 'Gestionnaire Achat & Fournisseurs' },

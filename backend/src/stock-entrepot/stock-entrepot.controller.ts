@@ -18,7 +18,7 @@ import type { Response } from 'express';
  *   GET  /stock-entrepot/produit/:produitId/entrepot/:entrepotId  → Exact quantity
  */
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER')
+@Roles('ADMIN', 'RESPONSABLE_STOCK')
 @Controller('stock-entrepot')
 export class StockEntrepotController {
   constructor(private readonly stockEntrepotService: StockEntrepotService) {}

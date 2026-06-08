@@ -110,6 +110,7 @@ export const commandesApi = {
   list: (params?: Record<string, string>) =>
     apiClient.get('/commandes', { params }),
   get: (id: string) => apiClient.get(`/commandes/${id}`),
+  enums: () => apiClient.get('/commandes/enums'),
   create: (data: unknown) => apiClient.post('/commandes', data),
   update: (id: string, data: unknown) => apiClient.patch(`/commandes/${id}`, data),
   delete: (id: string) => apiClient.delete(`/commandes/${id}`),
@@ -145,6 +146,7 @@ export const propositionsApi = {
   list: (params?: Record<string, string>) =>
     apiClient.get('/propositions', { params }),
   get: (id: string) => apiClient.get(`/propositions/${id}`),
+  enums: () => apiClient.get('/propositions/enums'),
   accept: (id: string, entrepotId: string) =>
     apiClient.post(`/propositions/${id}/accept`, { entrepotId }),
   refuse: (id: string) =>
@@ -165,7 +167,22 @@ export const stockEntrepotApi = {
 //  USERS (Admin)
 // ═══════════════════════════════════════════════════════════════════════════════
 export const usersApi = {
+  /** Lister tous les utilisateurs */
   list: () => apiClient.get('/auth/users'),
-  update: (id: string, data: unknown) => apiClient.patch(`/auth/users/${id}`, data),
+
+  /** Créer un utilisateur (admin) avec rôle imposé */
+  create: (data: { name: string; email: string; password: string; roleName: string }) =>
+    apiClient.post('/auth/users', data),
+
+  /** Modifier nom, email et/ou rôle */
+  update: (id: string, data: { name?: string; email?: string; roleName?: string }) =>
+    apiClient.patch(`/auth/users/${id}`, data),
+
+  /** Basculer actif / désactivé */
+  toggleActive: (id: string) =>
+    apiClient.patch(`/auth/users/${id}/toggle-active`),
+
+  /** Suppression définitive */
   delete: (id: string) => apiClient.delete(`/auth/users/${id}`),
 };
+

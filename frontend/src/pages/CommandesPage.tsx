@@ -41,6 +41,12 @@ export default function CommandesPage() {
   const [scannedCode, setScannedCode] = useState('');
   const [showScanner, setShowScanner] = useState(state?.openScanner ?? false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [enums, setEnums] = useState<{ types: string[]; etats: string[] }>({ types: [], etats: [] });
+
+  // Load enums on mount
+  useEffect(() => {
+    commandesApi.enums().then(res => setEnums(res.data)).catch(() => {});
+  }, []);
 
   // Clear scanner state to prevent reopening loops
   useEffect(() => {
@@ -127,17 +133,13 @@ export default function CommandesPage() {
         <select className="field-select" style={{ width: 'auto', padding: '9px 14px' }}
           value={typeFilter} onChange={e => setTypeFilter(e.target.value)} id="filter-type">
           <option value="">Tous les types</option>
-          <option value="ACHAT">Achat</option>
-          <option value="VENTE">Vente</option>
+          {enums.types.map(t => <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>)}
         </select>
 
         <select className="field-select" style={{ width: 'auto', padding: '9px 14px' }}
           value={etatFilter} onChange={e => setEtatFilter(e.target.value)} id="filter-etat">
           <option value="">Tous les états</option>
-          <option value="EN_COURS">En cours</option>
-          <option value="FERMEE">Fermée</option>
-          <option value="LIVREE">Livrée</option>
-          <option value="ANNULEE">Annulée</option>
+          {enums.etats.map(e => <option key={e} value={e}>{e.replace('_', ' ').charAt(0) + e.replace('_', ' ').slice(1).toLowerCase()}</option>)}
         </select>
       </div>
 

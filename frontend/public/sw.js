@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inventaires-v1';
+const CACHE_NAME = 'inventaires-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -7,67 +7,84 @@ const STATIC_ASSETS = [
   '/manifest.json',
 ];
 
-// Install: cache les assets de base
+const API_PREFIXES = [
+  '/api',
+  '/auth',
+  '/produits',
+  '/stock',
+  '/commandes',
+  '/flux',
+  '/entrepots',
+  '/fournisseurs',
+  '/dashboard',
+  '/propositions',
+];
+
+function isApiRequest(pathname) {
+  return API_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function shouldBypass(pathname, method) {
+  if (method !== 'GET') return true;
+  if (pathname.startsWith('/socket.io')) return true;
+  if (pathname.startsWith('/@vite') || pathname.startsWith('/__vite')) return true;
+  if (pathname.startsWith('/node_modules')) return true;
+  return false;
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
   );
   self.skipWaiting();
 });
 
-// Activate: nettoie les anciens caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      );
-    })
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)),
+      ),
+    ),
   );
   self.clients.claim();
 });
 
-// Fetch: stratégie NetworkFirst pour l'API, CacheFirst pour les assets statiques
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-HTTP(S) schemes (e.g. chrome-extension://) — they cannot be cached
   if (!url.protocol.startsWith('http')) return;
+  if (shouldBypass(url.pathname, request.method)) return;
 
-  // API calls → NetworkFirst
-  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/auth') || url.pathname.startsWith('/produits') || url.pathname.startsWith('/stock') || url.pathname.startsWith('/commandes') || url.pathname.startsWith('/flux') || url.pathname.startsWith('/entrepots') || url.pathname.startsWith('/fournisseurs') || url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/propositions')) {
+  if (isApiRequest(url.pathname)) {
     event.respondWith(
       fetch(request)
         .then((response) => response)
-        .catch(() => {
-          return caches.match(request).then((cached) => {
+        .catch(() =>
+          caches.match(request).then((cached) => {
             if (cached) return cached;
-            // Si offline et pas en cache, retourner la page offline pour les navigations
             if (request.mode === 'navigate') {
               return caches.match('/offline.html');
             }
             return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
-          });
-        })
+          }),
+        ),
     );
     return;
   }
 
-  // Static assets → CacheFirst, fallback network
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
       return fetch(request)
         .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
+          if (request.method === 'GET' && response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
           return response;
         })
         .catch(() => {
@@ -76,6 +93,6 @@ self.addEventListener('fetch', (event) => {
           }
           return new Response('Offline', { status: 503 });
         });
-    })
+    }),
   );
 });

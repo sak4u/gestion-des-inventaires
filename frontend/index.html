@@ -12,15 +12,6 @@
     <meta name="apple-mobile-web-app-title" content="Inventaires" />
     <meta name="description" content="Application de gestion de stock, commandes et flux de marchandises" />
     <title>Gestion des Inventaires</title>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-          navigator.serviceWorker.register('/sw.js').catch(function (err) {
-            console.warn('SW registration failed:', err);
-          });
-        });
-      }
-    </script>
   </head>
   <body>
     <div id="root"></div>

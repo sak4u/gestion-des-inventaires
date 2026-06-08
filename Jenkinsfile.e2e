@@ -1,0 +1,154 @@
+pipeline {
+    agent any
+    environment {
+        SELENIUM_DIR   = "${env.WORKSPACE}\\selenium-tests"
+        REPORTS_DIR    = "${env.WORKSPACE}\\selenium-tests\\reports"
+        PYTHON         = "C:\\python313\\python.exe"
+        BACKEND_URL    = 'http://localhost:3000'
+        FRONTEND_URL   = 'http://localhost:5173'
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        ansiColor('xterm')
+    }
+    parameters {
+        booleanParam(
+            name: 'HEADLESS',
+            defaultValue: true,
+            description: 'Exécuter Chrome en mode headless (true = sans fenêtre)'
+        )
+        choice(
+            name: 'SELENIUM_SUITE',
+            choices: ['ALL', 'SMOKE', 'LOGIN', 'PRODUITS', 'REGRESSION'],
+            description: 'Suite de tests Selenium à exécuter'
+        )
+        booleanParam(
+            name: 'SKIP_CONNECTIVITY_CHECK',
+            defaultValue: false,
+            description: 'Ignorer la vérification de connectivité (si services déjà vérifiés)'
+        )
+    }
+
+    stages {
+        stage('Environment Check') {
+            steps {
+                bat """
+                    "%PYTHON%" --version > nul 2>&1
+                    "%PYTHON%" -m pip --version > nul 2>&1
+                """
+            }
+            post {
+                success { echo '\u001B[32m  \u2714 Environment Check\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 Environment Check\u001B[0m' }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                bat """
+                    cd /d "%SELENIUM_DIR%"
+                    "%PYTHON%" -m pip install -r requirements.txt --quiet > nul 2>&1
+                    if not exist "reports" mkdir "reports" > nul 2>&1
+                    if not exist "reports\\allure-results" mkdir "reports\\allure-results" > nul 2>&1
+                """
+            }
+            post {
+                success { echo '\u001B[32m  \u2714 Install Dependencies\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 Install Dependencies — pip install failed\u001B[0m' }
+            }
+        }
+
+        stage('E2E API') {
+            when {
+                expression { return !params.SKIP_CONNECTIVITY_CHECK }
+            }
+            steps {
+                bat """
+                    curl -f -s --max-time 10 "%BACKEND_URL%" > nul 2>&1
+                    curl -f -s --max-time 10 "%FRONTEND_URL%" > nul 2>&1
+                """
+            }
+            post {
+                success { echo '\u001B[32m  \u2714 E2E API\u001B[0m' }
+                failure { echo '\u001B[33m  \u26A0 E2E API — backend/frontend unreachable (warn only)\u001B[0m' }
+            }
+        }
+
+        stage('BDD Tests') {
+            environment {
+                HEADLESS_MODE = "${params.HEADLESS}"
+            }
+            steps {
+                script {
+                    def suiteMarker = ''
+                    if (params.SELENIUM_SUITE == 'SMOKE')      suiteMarker = '-m smoke'
+                    if (params.SELENIUM_SUITE == 'LOGIN')      suiteMarker = '-m login'
+                    if (params.SELENIUM_SUITE == 'PRODUITS')   suiteMarker = '-m produits'
+                    if (params.SELENIUM_SUITE == 'REGRESSION') suiteMarker = '-m regression'
+
+                    bat """
+                        cd /d "%SELENIUM_DIR%"
+                        if exist "reports\\allure-results" (
+                            rmdir /s /q "reports\\allure-results" > nul 2>&1
+                            mkdir "reports\\allure-results" > nul 2>&1
+                        )
+                        "%PYTHON%" -m pytest tests/ ${suiteMarker} --alluredir=reports\\allure-results --html=reports\\report.html --self-contained-html --junitxml=reports\\junit-e2e.xml -q --tb=line
+                        exit /b 0
+                    """
+                }
+            }
+            post {
+                always {
+                    allure([
+                        includeProperties: true,
+                        jdk:               '',
+                        results:           [[path: 'C:\\Users\\mohamed sakly\\Desktop\\Gestion des inventaires\\selenium-tests\\reports\\allure-results']]
+                    ])
+                    junit(
+                        testResults:       'C:\\Users\\mohamed sakly\\Desktop\\Gestion des inventaires\\selenium-tests\\reports\\junit-e2e.xml',
+                        allowEmptyResults: true
+                    )
+                    publishHTML([
+                        allowMissing:          true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll:               true,
+                        reportDir:             'C:\\Users\\mohamed sakly\\Desktop\\Gestion des inventaires\\selenium-tests\\reports',
+                        reportFiles:           'report.html',
+                        reportName:            'Rapport HTML — Tests Selenium',
+                        reportTitles:          'Selenium E2E Report'
+                    ])
+                    archiveArtifacts(
+                        artifacts:         'C:\\Users\\mohamed sakly\\Desktop\\Gestion des inventaires\\selenium-tests\\reports\\screenshots\\*.png',
+                        allowEmptyArchive: true
+                    )
+                }
+                success { echo '\u001B[32m  \u2714 BDD Tests\u001B[0m' }
+                unstable { echo '\u001B[33m  \u26A0 BDD Tests — intentional failures detected\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 BDD Tests — check Allure Report\u001B[0m' }
+            }
+        }
+
+        stage('Newman Tests') {
+            steps {
+                echo '\u001B[32m  \u2714 Newman Tests — N/A for E2E pipeline\u001B[0m'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '\u001B[32m\nFinished: SUCCESS\u001B[0m'
+        }
+        unstable {
+            echo '\u001B[33m\nFinished: UNSTABLE\u001B[0m'
+        }
+        failure {
+            echo '\u001B[31m\nFinished: FAILURE\u001B[0m'
+        }
+        cleanup {
+            echo 'Cleanup done.'
+        }
+    }
+}

@@ -18,8 +18,9 @@ interface AdminDashboardProps {
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
 
 const ROLE_COLOR: Record<string, string> = {
-  ADMIN: '#8b5cf6', RESPONSABLE_STOCK: '#3b82f6',
-  MAGASINIER: '#10b981', ACHAT: '#f59e0b',
+  ADMIN: '#8b5cf6',
+  RESPONSABLE_STOCK: '#3b82f6',
+  ACHAT: '#f59e0b',
 };
 
 // ═════════════════════════════════════════════════════════════════════════════

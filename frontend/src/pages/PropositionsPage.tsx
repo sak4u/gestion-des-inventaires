@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '../components/layout/PageHeader';
-import { EmptyState, Spinner, Badge } from '../components/ui/index';
+import { EmptyState, Spinner, Badge, SearchInput } from '../components/ui/index';
 import Modal from '../components/ui/Modal';
-import { propositionsApi, entrepotsApi } from '../api/index';
-import { Bot, Clock, CheckCircle, XCircle, Check, X, AlertTriangle } from 'lucide-react';
+import { propositionsApi, entrepotsApi, produitsApi, fournisseursApi } from '../api/index';
+import { Bot, Check, X, AlertTriangle } from 'lucide-react';
 
 const STATUT_BADGE: Record<string, { label: string; v: 'orange' | 'green' | 'red' }> = {
   EN_ATTENTE: { label: 'En attente', v: 'orange' },
@@ -20,18 +20,55 @@ export default function PropositionsPage() {
   const [entrepots, setEntrepots]   = useState<any[]>([]);
   const [acting, setActing]         = useState(false);
   const [error, setError]           = useState('');
+  const [statuts, setStatuts]       = useState<string[]>([]);
+  const [search, setSearch]         = useState('');
+  const [pId, setPId]               = useState('');
+  const [fId, setFId]               = useState('');
+  const [cEtat, setCEtat]           = useState('');
+  const [resetKey, setResetKey]     = useState(0);
+  const [allProduits, setAllProduits] = useState<any[]>([]);
+  const [allFournisseurs, setAllFournisseurs] = useState<any[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const params: Record<string,string> = {};
       if (statutFilter) params.statut = statutFilter;
+      if (search) params.search = search;
+      if (pId) params.produitId = pId;
+      if (fId) params.fournisseurId = fId;
+      if (cEtat) params.commandeEtat = cEtat;
       const res = await propositionsApi.list(params);
       setProps(res.data ?? []);
     } finally { setLoading(false); }
-  }, [statutFilter]);
+  }, [statutFilter, search, pId, fId, cEtat]);
+
+  const resetFilters = () => {
+    setStatut('');
+    setSearch('');
+    setPId('');
+    setFId('');
+    setCEtat('');
+    setResetKey(prev => prev + 1);
+  };
 
   useEffect(() => { load(); }, [load]);
+
+  // Load enums and filter lists on mount
+  useEffect(() => {
+    console.log('Loading enums...');
+    propositionsApi.enums()
+      .then((res) => {
+        console.log('Enums loaded:', res.data);
+        setStatuts(res.data?.statuts ?? []);
+      })
+      .catch((err) => {
+        console.error('Failed to load enums:', err);
+      });
+    
+    produitsApi.list().then(res => setAllProduits(res.data ?? [])).catch(() => {});
+    fournisseursApi.list().then(res => setAllFournisseurs(res.data ?? [])).catch(() => {});
+  }, []);
 
   const openAccept = async (p: any) => {
     setAcceptModal(p); setEntrepotId(''); setError('');
@@ -63,17 +100,67 @@ export default function PropositionsPage() {
     <div>
       <PageHeader icon={<Bot size={28} />} title="Propositions IA" subtitle="Suggestions de réapprovisionnement générées automatiquement" />
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {[
-          { v: '', l: 'Toutes' },
-          { v: 'EN_ATTENTE', l: <><Clock size={14} /> En attente</> },
-          { v: 'ACCEPTEE', l: <><CheckCircle size={14} /> Acceptées</> },
-          { v: 'REFUSEE', l: <><XCircle size={14} /> Refusées</> }
-        ].map(({v, l}) => (
-          <button key={v} onClick={() => setStatut(v)}
-            className={statutFilter === v ? 'btn-primary-sm' : 'btn-secondary'}
-            style={{ padding: '7px 14px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>{l}</button>
-        ))}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ width: 300 }}>
+          <SearchInput
+            key={resetKey}
+            placeholder="Rechercher produit ou fournisseur..."
+            onSearch={(v) => setSearch(v)}
+          />
+        </div>
+
+        <select
+          className="field-select"
+          style={{ width: 'auto', padding: '9px 14px' }}
+          value={pId}
+          onChange={e => setPId(e.target.value)}
+        >
+          <option value="">Tous les produits</option>
+          {allProduits.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+        </select>
+
+        <select
+          className="field-select"
+          style={{ width: 'auto', padding: '9px 14px' }}
+          value={fId}
+          onChange={e => setFId(e.target.value)}
+        >
+          <option value="">Tous les fournisseurs</option>
+          {allFournisseurs.map(f => <option key={f.id} value={f.id}>{f.nom}</option>)}
+        </select>
+
+        <select
+          className="field-select"
+          style={{ width: 'auto', padding: '9px 14px' }}
+          value={cEtat}
+          onChange={e => setCEtat(e.target.value)}
+        >
+          <option value="">État commande (tous)</option>
+          <option value="EN_COURS">EN_COURS</option>
+          <option value="LIVREE">LIVREE</option>
+          <option value="FERMEE">FERMEE</option>
+          <option value="ANNULEE">ANNULEE</option>
+        </select>
+
+        <select
+          className="field-select"
+          style={{ width: 'auto', padding: '9px 14px' }}
+          value={statutFilter}
+          onChange={e => setStatut(e.target.value)}
+        >
+          <option value="">Statut proposition (tous)</option>
+          {statuts.map(s => (
+            <option key={s} value={s}>{STATUT_BADGE[s]?.label ?? s}</option>
+          ))}
+        </select>
+
+        <button 
+          className="btn-secondary" 
+          onClick={resetFilters}
+          style={{ padding: '9px 14px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <X size={16} /> Réinitialiser
+        </button>
       </div>
 
       {loading ? (

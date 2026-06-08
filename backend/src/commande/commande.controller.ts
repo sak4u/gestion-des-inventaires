@@ -5,9 +5,11 @@ import {
   Body,
   Patch,
   Param,
+  Query,
   Delete,
   UseGuards,
 } from '@nestjs/common';
+import { TypeCommande, EtatCommande } from '@prisma/client';
 import { CommandeService } from './commande.service';
 import { CreateCommandeDto } from './dto/create-commande.dto';
 import { UpdateCommandeDto } from './dto/update-commande.dto';
@@ -16,7 +18,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'ACHAT', 'RESPONSABLE_STOCK', 'MAGASINIER')
+@Roles('ADMIN', 'ACHAT', 'RESPONSABLE_STOCK')
 @Controller('commandes')
 export class CommandeController {
   constructor(private readonly commandeService: CommandeService) {}
@@ -26,9 +28,20 @@ export class CommandeController {
     return this.commandeService.create(createCommandeDto);
   }
 
+  @Get('enums')
+  getEnums() {
+    return {
+      types: Object.values(TypeCommande),
+      etats: Object.values(EtatCommande),
+    };
+  }
+
   @Get()
-  findAll() {
-    return this.commandeService.findAll();
+  findAll(@Query('type') type?: string, @Query('etat') etat?: string) {
+    return this.commandeService.findAll(
+      type as TypeCommande | undefined,
+      etat as EtatCommande | undefined,
+    );
   }
 
   @Get('stats')

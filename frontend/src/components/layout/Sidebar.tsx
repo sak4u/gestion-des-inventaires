@@ -14,7 +14,7 @@ const NAV_ITEMS: NavItem[] = [
     path: '/produits',
     icon: '📦',
     label: 'Produits',
-    roles: ['ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER', 'ACHAT'],
+    roles: ['ADMIN', 'RESPONSABLE_STOCK', 'ACHAT'],
   },
   {
     path: '/entrepots',
@@ -38,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
     path: '/flux-de-stock',
     icon: '🔄',
     label: 'Flux de Stock',
-    roles: ['ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER'],
+    roles: ['ADMIN', 'RESPONSABLE_STOCK'],
   },
   {
     path: '/propositions',

@@ -1,0 +1,181 @@
+pipeline {
+    agent any
+    tools {
+        nodejs 'NodeJS 20'
+    }
+    environment {
+        BACKEND_DIR     = "${env.WORKSPACE}\\backend"
+        API_REPORTS_DIR = "${env.WORKSPACE}\\backend\\test\\reports"
+        NODE_ENV        = 'test'
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
+        timeout(time: 20, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        ansiColor('xterm')
+    }
+    parameters {
+        booleanParam(
+            name: 'WITH_COVERAGE',
+            defaultValue: true,
+            description: 'Générer le rapport de couverture de code (lcov)'
+        )
+        booleanParam(
+            name: 'RUN_NEWMAN',
+            defaultValue: true,
+            description: 'Exécuter les tests Postman via Newman'
+        )
+        booleanParam(
+            name: 'RUN_BDD',
+            defaultValue: true,
+            description: 'Exécuter les scénarios Cucumber BDD'
+        )
+    }
+
+    stages {
+        stage('Environment Check') {
+            steps {
+                bat """
+                    node --version > nul 2>&1
+                    npm --version > nul 2>&1
+                    newman --version > nul 2>&1
+                """
+            }
+            post {
+                success { echo '\u001B[32m  \u2714 Environment Check\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 Environment Check\u001B[0m' }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                bat """
+                    cd /d "%BACKEND_DIR%"
+                    npm install --prefer-offline > nul 2>&1
+                    if not exist "test\\reports" mkdir "test\\reports" > nul 2>&1
+                """
+            }
+            post {
+                success { echo '\u001B[32m  \u2714 Install Dependencies\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 Install Dependencies — npm install failed\u001B[0m' }
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                bat """
+                    cd /d "%BACKEND_DIR%"
+                    set JEST_JUNIT_OUTPUT_DIR=test\\reports
+                    set JEST_JUNIT_OUTPUT_NAME=junit-unit.xml
+                    npm run test:ci > nul 2>&1
+                """
+            }
+            post {
+                always {
+                    junit(
+                        testResults:          "${env.WORKSPACE}\\backend\\test\\reports\\junit-unit.xml",
+                        allowEmptyResults:     true,
+                        skipPublishingChecks:  false
+                    )
+                    publishHTML([
+                        allowMissing:          true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll:               true,
+                        reportDir:             "${env.WORKSPACE}\\backend\\coverage\\lcov-report",
+                        reportFiles:           'index.html',
+                        reportName:            'Couverture Code (Jest)',
+                        reportTitles:          'Code Coverage'
+                    ])
+                }
+                success { echo '\u001B[32m  \u2714 Unit Tests\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 Unit Tests — check Test Results tab\u001B[0m' }
+            }
+        }
+
+        stage('E2E API') {
+            steps {
+                bat """
+                    cd /d "%BACKEND_DIR%"
+                    set JEST_JUNIT_OUTPUT_DIR=test\\reports
+                    set JEST_JUNIT_OUTPUT_NAME=junit-e2e-supertest.xml
+                    npm run test:e2e:ci > nul 2>&1
+                """
+            }
+            post {
+                always {
+                    junit(
+                        testResults:       "${env.WORKSPACE}\\backend\\test\\reports\\junit-e2e-supertest.xml",
+                        allowEmptyResults: true
+                    )
+                }
+                success { echo '\u001B[32m  \u2714 E2E API\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 E2E API — check Test Results tab\u001B[0m' }
+            }
+        }
+
+        stage('BDD Tests') {
+            when {
+                expression { return params.RUN_BDD }
+            }
+            steps {
+                bat """
+                    cd /d "%BACKEND_DIR%"
+                    npm run test:bdd:ci > nul 2>&1
+                """
+            }
+            post {
+                always {
+                    archiveArtifacts(
+                        artifacts:         "${env.WORKSPACE}\\backend\\test\\reports\\cucumber-report.json",
+                        allowEmptyArchive: true
+                    )
+                }
+                success { echo '\u001B[32m  \u2714 BDD Tests\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 BDD Tests — check Cucumber Artifacts\u001B[0m' }
+            }
+        }
+
+        stage('Newman Tests') {
+            when {
+                expression { return params.RUN_NEWMAN }
+            }
+            steps {
+                bat """
+                    cd /d "%BACKEND_DIR%"
+                    if not exist "test\\reports" mkdir "test\\reports" > nul 2>&1
+                    npm run test:postman > nul 2>&1
+                """
+            }
+            post {
+                always {
+                    publishHTML([
+                        allowMissing:          true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll:               true,
+                        reportDir:             "${env.WORKSPACE}\\backend\\test\\reports",
+                        reportFiles:           'newman-report.html',
+                        reportName:            'Rapport Newman — Tests API',
+                        reportTitles:          'Newman API Report'
+                    ])
+                }
+                success { echo '\u001B[32m  \u2714 Newman Tests\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 Newman Tests — check Newman Report tab\u001B[0m' }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '\u001B[32m\nFinished: SUCCESS\u001B[0m'
+        }
+        unstable {
+            echo '\u001B[33m\nFinished: UNSTABLE\u001B[0m'
+        }
+        failure {
+            echo '\u001B[31m\nFinished: FAILURE\u001B[0m'
+        }
+        cleanup {
+            echo 'Cleanup done.'
+        }
+    }
+}

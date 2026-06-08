@@ -6,7 +6,8 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
+import { getWebSocketBaseUrl } from '../lib/ws';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type NotifType = 'stock_alert' | 'proposition' | 'commande' | 'info';
@@ -32,35 +33,39 @@ interface NotificationContextValue {
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
-const WS_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
-let socket: Socket | null = null;
-
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    socket = io(`${WS_URL}/notifications`, {
-      transports: ['websocket'],
+    const baseUrl = getWebSocketBaseUrl();
+    const socket = io(`${baseUrl}/notifications`, {
+      path: '/socket.io',
+      transports: ['polling', 'websocket'],
       reconnectionDelay: 3000,
       reconnectionDelayMax: 10000,
     });
 
-    socket.on('connect', () => setConnected(true));
-    socket.on('disconnect', () => setConnected(false));
-
-    socket.on('notification', (payload: Omit<Notification, 'id' | 'read'>) => {
+    const onConnect = () => setConnected(true);
+    const onDisconnect = () => setConnected(false);
+    const onNotification = (payload: Omit<Notification, 'id' | 'read'>) => {
       const notif: Notification = {
         ...payload,
         id: crypto.randomUUID(),
         read: false,
       };
       setNotifications((prev) => [notif, ...prev].slice(0, 50));
-    });
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('notification', onNotification);
 
     return () => {
-      socket?.disconnect();
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('notification', onNotification);
+      socket.disconnect();
     };
   }, []);
 

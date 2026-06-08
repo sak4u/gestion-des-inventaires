@@ -6,7 +6,6 @@ import { InstallPWA } from './components/ui/index';
 
 // ── Auth pages (already built) ────────────────────────────────────────────────
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 // ── App pages ─────────────────────────────────────────────────────────────────
@@ -50,7 +49,7 @@ function AppRouter() {
 
       {/* Public */}
       <Route path="/login"           element={<LoginPage />} />
-      <Route path="/register"        element={<RegisterPage />} />
+      <Route path="/register"        element={<Navigate to="/login" replace />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
       {/* Protected — all wrapped in MainLayout */}
@@ -66,7 +65,7 @@ function AppRouter() {
         path="/produits"
         element={
           <RequireAuth>
-            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER', 'ACHAT']}>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'ACHAT']}>
               <MainLayout><ProduitsPage /></MainLayout>
             </RequireRole>
           </RequireAuth>
@@ -76,7 +75,7 @@ function AppRouter() {
         path="/produits/:id"
         element={
           <RequireAuth>
-            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER', 'ACHAT']}>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'ACHAT']}>
               <MainLayout><ProduitDetailPage /></MainLayout>
             </RequireRole>
           </RequireAuth>
@@ -126,18 +125,8 @@ function AppRouter() {
         path="/commandes"
         element={
           <RequireAuth>
-            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK', 'MAGASINIER']}>
+            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK']}>
               <MainLayout><CommandesPage /></MainLayout>
-            </RequireRole>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/commandes/:id"
-        element={
-          <RequireAuth>
-            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK', 'MAGASINIER']}>
-              <MainLayout><CommandeDetailPage /></MainLayout>
             </RequireRole>
           </RequireAuth>
         }
@@ -153,10 +142,20 @@ function AppRouter() {
         }
       />
       <Route
+        path="/commandes/:id"
+        element={
+          <RequireAuth>
+            <RequireRole roles={['ADMIN', 'ACHAT', 'RESPONSABLE_STOCK']}>
+              <MainLayout><CommandeDetailPage /></MainLayout>
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/flux-de-stock"
         element={
           <RequireAuth>
-            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK', 'MAGASINIER']}>
+            <RequireRole roles={['ADMIN', 'RESPONSABLE_STOCK']}>
               <MainLayout><FluxDeStockPage /></MainLayout>
             </RequireRole>
           </RequireAuth>

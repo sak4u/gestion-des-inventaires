@@ -29,9 +29,6 @@ async function main() {
   const roleRespStock = await prisma.role.create({
     data: { name: 'RESPONSABLE_STOCK', description: 'Manager de stock' },
   });
-  const roleMagasinier = await prisma.role.create({
-    data: { name: 'MAGASINIER', description: 'Employé entrepôt / Magasinier' },
-  });
   const roleAchat = await prisma.role.create({
     data: { name: 'ACHAT', description: 'Gestionnaire Achat & Fournisseurs' },
   });
@@ -56,15 +53,6 @@ async function main() {
       email: 'manager@email.com',
       password: hashedPassword,
       roleId: roleRespStock.id,
-    },
-  });
-
-  const gs = await prisma.user.create({
-    data: {
-      name: 'Magasinier User',
-      email: 'magasinier@email.com',
-      password: hashedPassword,
-      roleId: roleMagasinier.id,
     },
   });
 
@@ -166,7 +154,7 @@ async function main() {
             date: new Date(new Date().setDate(new Date().getDate() - 90)),
             produitId: produit.id,
             entrepotId: entrepots[0].id,
-            creerParId: gs.id,
+            creerParId: responsable.id,
         }
     });
     
@@ -188,7 +176,7 @@ async function main() {
                 date: getRandomDatePast90Days(),
                 produitId: produit.id,
                 entrepotId: eId,
-                creerParId: gs.id,
+                creerParId: responsable.id,
             }
         });
         fluxCount++;

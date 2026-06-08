@@ -191,8 +191,13 @@ export class CommandeService {
     });
   }
 
-  async findAll() {
+  async findAll(type?: TypeCommande, etat?: EtatCommande) {
+    const where: Prisma.CommandeWhereInput = {};
+    if (type) where.type = type;
+    if (etat) where.etat = etat;
+
     return this.prisma.commande.findMany({
+      where,
       include: {
         user: { select: { id: true, name: true, email: true } },
         fournisseur: true,

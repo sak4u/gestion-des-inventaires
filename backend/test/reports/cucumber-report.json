@@ -1,0 +1,983 @@
+[
+  {
+    "description": "  En tant qu'utilisateur du système de gestion des stocks\n  Je veux pouvoir me connecter à l'application\n  Afin d'accéder aux fonctionnalités selon mon rôle",
+    "elements": [
+      {
+        "description": "",
+        "id": "authentification-des-utilisateurs;connexion-réussie-d'un-administrateur",
+        "keyword": "Scénario",
+        "line": 8,
+        "name": "Connexion réussie d'un administrateur",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 2672100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 9,
+            "name": "j'envoie une requête POST sur \"/auth/login\" avec l'email \"admin@email.com\" et le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:20"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 345438300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 10,
+            "name": "le code HTTP de la réponse est 200",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:196"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 210299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Et ",
+            "line": 11,
+            "name": "la réponse contient le champ \"access_token\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:212"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 128600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Et ",
+            "line": 12,
+            "name": "le rôle de l'utilisateur est \"ADMIN\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:219"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 122600
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "authentification-des-utilisateurs;connexion-réussie-d'un-responsable-de-stock",
+        "keyword": "Scénario",
+        "line": 14,
+        "name": "Connexion réussie d'un responsable de stock",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 63200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 15,
+            "name": "j'envoie une requête POST sur \"/auth/login\" avec l'email \"manager@email.com\" et le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:20"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 174719400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 16,
+            "name": "le code HTTP de la réponse est 200",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:196"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 124899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Et ",
+            "line": 17,
+            "name": "la réponse contient le champ \"access_token\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:212"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 96100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Et ",
+            "line": 18,
+            "name": "le rôle de l'utilisateur est \"RESPONSABLE_STOCK\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:219"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 100899
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "authentification-des-utilisateurs;échec-de-connexion-avec-mauvais-mot-de-passe",
+        "keyword": "Scénario",
+        "line": 20,
+        "name": "Échec de connexion avec mauvais mot de passe",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 150599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 21,
+            "name": "j'envoie une requête POST sur \"/auth/login\" avec l'email \"admin@email.com\" et le mot de passe \"MauvaisPass\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:20"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 141245699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 22,
+            "name": "le code HTTP de la réponse est 401",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:196"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 116800
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "authentification-des-utilisateurs;échec-de-connexion-avec-email-inexistant",
+        "keyword": "Scénario",
+        "line": 24,
+        "name": "Échec de connexion avec email inexistant",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 51099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 25,
+            "name": "j'envoie une requête POST sur \"/auth/login\" avec l'email \"inexistant@test.com\" et le mot de passe \"Test1234\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:20"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 8753199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 26,
+            "name": "le code HTTP de la réponse est 401",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:196"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 180999
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "authentification-des-utilisateurs;accès-refusé-à-une-route-protégée-sans-token",
+        "keyword": "Scénario",
+        "line": 28,
+        "name": "Accès refusé à une route protégée sans token",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 65300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 29,
+            "name": "je ne suis pas authentifié",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:36"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 200000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 30,
+            "name": "j'envoie une requête GET sur \"/auth/profile\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:100"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 6366399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 31,
+            "name": "le code HTTP de la réponse est 401",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:196"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 93999
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "authentification-des-utilisateurs;un-non-admin-ne-peut-pas-lister-les-utilisateurs",
+        "keyword": "Scénario",
+        "line": 33,
+        "name": "Un non-ADMIN ne peut pas lister les utilisateurs",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 42399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 34,
+            "name": "je suis connecté avec l'email \"manager@email.com\" et le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:40"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 141179899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 35,
+            "name": "j'envoie une requête GET sur \"/auth/users\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:100"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 8900199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 36,
+            "name": "le code HTTP de la réponse est 403",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:196"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 150399
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "authentification-des-utilisateurs",
+    "line": 2,
+    "keyword": "Fonctionnalité",
+    "name": "Authentification des utilisateurs",
+    "tags": [],
+    "uri": "features\\auth.feature"
+  },
+  {
+    "description": "  En tant que gestionnaire achat du système de gestion des inventaires\n  Je veux créer et gérer des commandes d'achat\n  Afin d'approvisionner les entrepôts en produits",
+    "elements": [
+      {
+        "description": "",
+        "id": "gestion-du-cycle-de-vie-des-commandes-d'achat;création-d'une-commande-d'achat-valide",
+        "keyword": "Scénario",
+        "line": 11,
+        "name": "Création d'une commande d'achat valide",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 44199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 9,
+            "name": "je suis connecté en tant que \"admin@email.com\" avec le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:53"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 161752700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 12,
+            "name": "je crée une commande d'achat avec un fournisseur et un entrepôt",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:108"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 113616600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 13,
+            "name": "la commande est créée avec l'état \"EN_COURS\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:231"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 201999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Et ",
+            "line": 14,
+            "name": "le code de statut HTTP est 201",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:204"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 174600
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "gestion-du-cycle-de-vie-des-commandes-d'achat;échec-création-sans-fournisseur",
+        "keyword": "Scénario",
+        "line": 16,
+        "name": "Échec création sans fournisseur",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 46000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 9,
+            "name": "je suis connecté en tant que \"admin@email.com\" avec le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:53"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 175836199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 17,
+            "name": "je crée une commande d'achat sans fournisseur",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:135"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 49228900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 18,
+            "name": "le code de statut HTTP est 400",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:204"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 162899
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "gestion-du-cycle-de-vie-des-commandes-d'achat;échec-création-sans-entrepôt",
+        "keyword": "Scénario",
+        "line": 20,
+        "name": "Échec création sans entrepôt",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 78600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 9,
+            "name": "je suis connecté en tant que \"admin@email.com\" avec le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:53"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 172757899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 21,
+            "name": "je crée une commande d'achat sans entrepôt",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:152"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 29134299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 22,
+            "name": "le code de statut HTTP est 400",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:204"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 209600
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "gestion-du-cycle-de-vie-des-commandes-d'achat;passage-d'une-commande-en_cours-à-fermee",
+        "keyword": "Scénario",
+        "line": 24,
+        "name": "Passage d'une commande EN_COURS à FERMEE",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 41599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 9,
+            "name": "je suis connecté en tant que \"admin@email.com\" avec le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:53"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 183649299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné qu'",
+            "line": 25,
+            "name": "il existe une commande avec l'état \"EN_COURS\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:69"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 53889699
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 26,
+            "name": "je mets à jour l'état de la commande à \"FERMEE\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:169"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 25194799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 27,
+            "name": "la commande a l'état \"FERMEE\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:239"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 585800
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Et ",
+            "line": 28,
+            "name": "le code de statut HTTP est 200",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:204"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 158300
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "gestion-du-cycle-de-vie-des-commandes-d'achat;génération-automatique-d'une-proposition-par-l'ia",
+        "keyword": "Scénario",
+        "line": 30,
+        "name": "Génération automatique d'une proposition par l'IA",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 65399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 9,
+            "name": "je suis connecté en tant que \"admin@email.com\" avec le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:53"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 219160000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 31,
+            "name": "je déclenche la vérification automatique des stocks",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:183"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 476355300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 32,
+            "name": "je reçois un résumé avec le nombre de propositions créées",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:247"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 164400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Et ",
+            "line": 33,
+            "name": "le code de statut HTTP est 200",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:204"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 66800
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "gestion-du-cycle-de-vie-des-commandes-d'achat",
+    "line": 2,
+    "keyword": "Fonctionnalité",
+    "name": "Gestion du cycle de vie des commandes d'achat",
+    "tags": [],
+    "uri": "features\\commande.feature"
+  },
+  {
+    "description": "  En tant qu'administrateur du système de gestion des stocks\n  Je veux gérer le catalogue de produits\n  Afin de maintenir l'inventaire à jour",
+    "elements": [
+      {
+        "description": "",
+        "id": "gestion-du-catalogue-de-produits;consulter-la-liste-des-produits",
+        "keyword": "Scénario",
+        "line": 8,
+        "name": "Consulter la liste des produits",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 30300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 9,
+            "name": "je suis connecté avec l'email \"admin@email.com\" et le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:40"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 158968600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 10,
+            "name": "j'envoie une requête GET sur \"/produits\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:100"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 61277600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 11,
+            "name": "le code HTTP de la réponse est 200",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:196"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1582799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Et ",
+            "line": 12,
+            "name": "la réponse est une liste JSON",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:227"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 220499
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "gestion-du-catalogue-de-produits;créer-un-nouveau-produit",
+        "keyword": "Scénario",
+        "line": 14,
+        "name": "Créer un nouveau produit",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 62100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 15,
+            "name": "je suis connecté avec l'email \"admin@email.com\" et le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:40"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 174902600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 16,
+            "name": "je crée un produit avec le nom \"Produit BDD Test\" et le code barre \"BDD-FEAT-001\"",
+            "match": {
+              "location": "features\\step_definitions\\produit.steps.ts:10"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 25377000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 17,
+            "name": "le code HTTP de la réponse est 201",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:196"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 129400
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Et ",
+            "line": 18,
+            "name": "la réponse contient le champ \"id\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:212"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 271000
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "gestion-du-catalogue-de-produits;accès-refusé-à-la-liste-des-produits-sans-authentification",
+        "keyword": "Scénario",
+        "line": 20,
+        "name": "Accès refusé à la liste des produits sans authentification",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 97099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 21,
+            "name": "je ne suis pas authentifié",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:36"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 96899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 22,
+            "name": "j'envoie une requête GET sur \"/produits\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:100"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5671300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 23,
+            "name": "le code HTTP de la réponse est 401",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:196"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 161099
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "gestion-du-catalogue-de-produits;consultation-d'un-produit-inexistant-retourne-404",
+        "keyword": "Scénario",
+        "line": 25,
+        "name": "Consultation d'un produit inexistant retourne 404",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 52199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Étant donné que ",
+            "line": 26,
+            "name": "je suis connecté avec l'email \"admin@email.com\" et le mot de passe \"admin123\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:40"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 238487100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Quand ",
+            "line": 27,
+            "name": "j'envoie une requête GET sur \"/produits/00000000-0000-0000-0000-000000000000\"",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:100"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 13665499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Alors ",
+            "line": 28,
+            "name": "le code HTTP de la réponse est 404",
+            "match": {
+              "location": "features\\step_definitions\\auth.steps.ts:196"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 159599
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "gestion-du-catalogue-de-produits",
+    "line": 2,
+    "keyword": "Fonctionnalité",
+    "name": "Gestion du catalogue de produits",
+    "tags": [],
+    "uri": "features\\produit.feature"
+  }
+]

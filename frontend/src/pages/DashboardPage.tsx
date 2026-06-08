@@ -6,7 +6,6 @@ import type { Kpis, FluxPoint, EntrepotStock, Flux, Proposition, Fournisseur, Us
 // ── Role-specific dashboards ──────────────────────────────────────────────────
 import AdminDashboard from '../components/dashboard/AdminDashboard';
 import StockManagerDashboard from '../components/dashboard/StockManagerDashboard';
-import WarehouseDashboard from '../components/dashboard/WarehouseDashboard';
 import PurchaserDashboard from '../components/dashboard/PurchaserDashboard';
 
 // ── Skeleton Loader ───────────────────────────────────────────────────────────
@@ -128,9 +127,14 @@ export default function DashboardPage() {
     case 'ADMIN':
       return <AdminDashboard kpis={kpis} fluxData={fluxData} entrepotData={entrepotData} recentFlux={recentFlux} users={users} />;
     case 'RESPONSABLE_STOCK':
-      return <StockManagerDashboard kpis={kpis} propositions={propositions} entrepots={entrepotData} />;
-    case 'MAGASINIER':
-      return <WarehouseDashboard recentFlux={recentFlux} />;
+      return (
+        <StockManagerDashboard
+          kpis={kpis}
+          propositions={propositions}
+          entrepots={entrepotData}
+          recentFlux={recentFlux}
+        />
+      );
     case 'ACHAT':
       return <PurchaserDashboard kpis={kpis} propositions={propositions} fournisseurs={fournisseurs} commandes={commandes} />;
     default:

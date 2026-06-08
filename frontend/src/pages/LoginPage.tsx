@@ -36,6 +36,14 @@ export default function LoginPage() {
 
       <div className="auth-panel-right">
         <div className="auth-card">
+          <div className="mobile-brand-logo">
+            <div className="brand-logo-icon">📦</div>
+            <div className="brand-logo-text">
+              <strong>InventiQ</strong>
+              <span>Gestion Intelligente</span>
+            </div>
+          </div>
+
           <div className="auth-card-header">
             <h2>Connexion</h2>
             <p>Bienvenue ! Connectez-vous pour accéder à votre espace.</p>
@@ -93,10 +101,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="auth-link-row">
-            Pas encore de compte ?{' '}
-            <Link to="/register" className="btn-ghost">Créer un compte</Link>
-          </div>
+
         </div>
       </div>
     </div>
