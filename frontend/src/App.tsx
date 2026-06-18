@@ -1,8 +1,9 @@
+import * as React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import MainLayout from './layouts/MainLayout';
-import { InstallPWA } from './components/ui/index';
+import InstallPWA from './components/ui/InstallPWA';
 
 // ── Auth pages (already built) ────────────────────────────────────────────────
 import LoginPage from './pages/LoginPage';

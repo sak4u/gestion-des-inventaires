@@ -10,6 +10,9 @@ import { UpdateCommandeDto } from './dto/update-commande.dto';
 import { MailService } from '../mail/mail.service';
 import { EtatCommande, TypeCommande } from '@prisma/client';
 import { Prisma } from '@prisma/client';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { PredictionService } from '../ai/prediction/prediction.service';
+import { PropositionCommandeService } from '../proposition-commande/proposition-commande.service';
 
 @Injectable()
 export class CommandeService {
@@ -18,6 +21,9 @@ export class CommandeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly notificationsGateway: NotificationsGateway,
+    private readonly predictionService: PredictionService,
+    private readonly propositionService: PropositionCommandeService,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────
@@ -40,6 +46,53 @@ export class CommandeService {
   }
 
   // ─────────────────────────────────────────────────────────────────
+  //  HELPER: check and notify stock alerts
+  // ─────────────────────────────────────────────────────────────────
+
+  private async checkAndAlertStockBas(
+    produitId: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    try {
+      const client = tx ?? this.prisma;
+      const agg = await client.stockEntrepot.aggregate({
+        where: { produitId },
+        _sum: { quantite: true },
+      });
+      const stockTotal = agg._sum.quantite ?? 0;
+
+      const produit = await client.produit.findUnique({
+        where: { id: produitId },
+        select: { nom: true, stockAlert: true },
+      });
+
+      if (produit && stockTotal <= (produit.stockAlert ?? 0)) {
+        this.notificationsGateway.alertStockBas(
+          produit.nom,
+          stockTotal,
+          produit.stockAlert ?? 0,
+        );
+        // Trigger AI evaluation when stock is low
+        void this.triggerPredictionUpdate(produitId);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error checking stock alert in CommandeService: ${error.message}`,
+      );
+    }
+  }
+
+  private async triggerPredictionUpdate(produitId: string): Promise<void> {
+    try {
+      this.logger.log(`Low stock detected for ${produitId} — triggering AI proposition...`);
+      await this.predictionService.generatePrediction(produitId);
+      await this.propositionService.generateProposition(produitId);
+    } catch (error) {
+      this.logger.warn(`AI trigger failed for ${produitId}: ${error.message}`);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
   //  HELPER: generate achat flux for all lignes (called inside tx)
   //  Only triggered when a ACHAT commande transitions to LIVREE.
   // ─────────────────────────────────────────────────────────────────
@@ -47,7 +100,8 @@ export class CommandeService {
   private async generateFluxStock(
     commandeId: string,
     tx: Prisma.TransactionClient,
-  ): Promise<void> {
+  ): Promise<string[]> {
+    const affectedProduitIds: string[] = [];
     const commande = await tx.commande.findUnique({
       where: { id: commandeId },
       include: {
@@ -170,7 +224,12 @@ export class CommandeService {
       this.logger.log(
         `Flux ${isAchat ? 'achat' : 'vente'} auto: ${isAchat ? '+' : '-'}${ligne.quantite} "${ligne.produit.nom}"`,
       );
+
+      if (!affectedProduitIds.includes(ligne.produitId)) {
+        affectedProduitIds.push(ligne.produitId);
+      }
     }
+    return affectedProduitIds;
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -285,13 +344,13 @@ export class CommandeService {
 
     // Transition to LIVREE — applies to both ACHAT and VENTE
     if (updateCommandeDto.etat === EtatCommande.LIVREE) {
-      return this.prisma.$transaction(
+      const updated = await this.prisma.$transaction(
         async (tx) => {
-          // 1. Generate stock flux automatically
-          await this.generateFluxStock(id, tx);
+          // 1. Generate stock flux automatically and get affected products
+          const affectedProduitIds = await this.generateFluxStock(id, tx);
 
           // 2. Update the commande state
-          const updated = await tx.commande.update({
+          const updatedCmd = await tx.commande.update({
             where: { id },
             data: { etat: EtatCommande.LIVREE },
             include: {
@@ -303,29 +362,42 @@ export class CommandeService {
             },
           });
 
-          // 3. Notify supplier via email (fire-and-forget, outside tx)
-          if (updated.fournisseur?.email) {
-            void this.mailService
-              .sendCommandeNotification(updated.fournisseur.email, {
-                commandeId: updated.id,
-                dateCreation: updated.dateCreation,
-                nomFournisseur: updated.fournisseur.nom,
-                lignes: updated.commandesLigne.map((l: any) => ({
-                  nomProduit: l.produit.nom,
-                  quantite: l.quantite,
-                  prixUnitaire: l.prixUnitaire,
-                })),
-              })
-              .catch((err) =>
-                this.logger.warn(`Email fournisseur échoué: ${err}`),
-              );
-          }
-
-          this.logger.log(`Commande ${id} passée à LIVREE — flux générés automatiquement`);
-          return updated;
+          return { updatedCmd, affectedProduitIds };
         },
         { isolationLevel: 'Serializable' },
       );
+
+      const { updatedCmd, affectedProduitIds } = updated;
+
+      // 3. Post-commit: Stock Alerts & AI Propositions
+      for (const produitId of affectedProduitIds) {
+        void this.checkAndAlertStockBas(produitId);
+      }
+
+      // 4. Notify supplier via email (fire-and-forget)
+      if (updatedCmd.fournisseur?.email) {
+        void this.mailService
+          .sendCommandeNotification(updatedCmd.fournisseur.email, {
+            commandeId: updatedCmd.id,
+            dateCreation: updatedCmd.dateCreation,
+            nomFournisseur: updatedCmd.fournisseur.nom,
+            lignes: updatedCmd.commandesLigne.map((l: any) => ({
+              nomProduit: l.produit.nom,
+              quantite: l.quantite,
+              prixUnitaire: l.prixUnitaire,
+            })),
+          })
+          .catch((err) =>
+            this.logger.warn(`Email fournisseur échoué: ${err}`),
+          );
+      }
+
+      this.logger.log(`Commande ${id} passée à LIVREE — flux générés automatiquement`);
+
+      // Trigger notification for delivery
+      this.notificationsGateway.alertCommandeLivree(id);
+
+      return updatedCmd;
     }
 
     // Standard state update (EN_COURS → FERMEE, etc.)

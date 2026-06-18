@@ -1,4 +1,4 @@
-// ── KpiCard ───────────────────────────────────────────────────────────────────
+import React from 'react';
 import { Mailbox, Search, X } from 'lucide-react';
 
 export interface KpiCardProps {

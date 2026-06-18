@@ -1,13 +1,13 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  type ReactNode,
-} from 'react';
+import * as React from 'react';
 import { io } from 'socket.io-client';
-import { getWebSocketBaseUrl } from '../lib/ws';
+
+const { createContext, useContext, useEffect, useState, useCallback } = React;
+type ReactNode = React.ReactNode;
+
+// Always connect directly to the NestJS backend to avoid Vite HMR proxy conflicts
+const SOCKET_URL = import.meta.env.DEV
+  ? 'http://localhost:3000'
+  : window.location.origin;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type NotifType = 'stock_alert' | 'proposition' | 'commande' | 'info';
@@ -36,18 +36,43 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [connected, setConnected] = useState(false);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('access_token'));
+
+  // Listen for login/logout (storage changes) from other tabs or same tab updates
+  useEffect(() => {
+    const handleStorage = () => {
+      const currentToken = localStorage.getItem('access_token');
+      setToken(currentToken);
+    };
+
+    window.addEventListener('storage', handleStorage);
+    // Custom event for same-window updates if needed (AuthContext could emit this)
+    window.addEventListener('auth_update', handleStorage);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('auth_update', handleStorage);
+    };
+  }, []);
 
   useEffect(() => {
-    const baseUrl = getWebSocketBaseUrl();
-    const socket = io(`${baseUrl}/notifications`, {
+    if (!token) {
+      setConnected(false);
+      return;
+    }
+
+    console.log('[WS] Connecting to:', `${SOCKET_URL}/notifications`);
+    const socket = io(`${SOCKET_URL}/notifications`, {
       path: '/socket.io',
       transports: ['polling', 'websocket'],
+      auth: { token },
       reconnectionDelay: 3000,
       reconnectionDelayMax: 10000,
     });
 
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
+    
     const onNotification = (payload: Omit<Notification, 'id' | 'read'>) => {
       const notif: Notification = {
         ...payload,
@@ -67,7 +92,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       socket.off('notification', onNotification);
       socket.disconnect();
     };
-  }, []);
+  }, [token]);
 
   const markRead = useCallback((id: string) => {
     setNotifications((prev) =>

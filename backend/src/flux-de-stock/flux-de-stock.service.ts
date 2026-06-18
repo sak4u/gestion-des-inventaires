@@ -11,6 +11,7 @@ import { CreateTransfertDto } from './dto/create-transfert.dto';
 import { PredictionService } from '../ai/prediction/prediction.service';
 import { PropositionCommandeService } from '../proposition-commande/proposition-commande.service';
 import { Prisma } from '@prisma/client';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 // ═══════════════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -27,6 +28,7 @@ export class FluxDeStockService {
     private readonly prisma: PrismaService,
     private readonly predictionService: PredictionService,
     private readonly propositionService: PropositionCommandeService,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────
@@ -49,6 +51,32 @@ export class FluxDeStockService {
       _sum: { quantite: true },
     });
     return agg._sum.quantite ?? 0;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  HELPER: check if stock is low and send notification
+  // ─────────────────────────────────────────────────────────────────
+
+  private async checkAndAlertStockBas(produitId: string) {
+    try {
+      const stockTotal = await this.getStockTotal(produitId);
+      const produit = await this.prisma.produit.findUnique({
+        where: { id: produitId },
+        select: { nom: true, stockAlert: true },
+      });
+
+      if (produit && stockTotal <= (produit.stockAlert ?? 0)) {
+        this.notificationsGateway.alertStockBas(
+          produit.nom,
+          stockTotal,
+          produit.stockAlert ?? 0,
+        );
+        // Ensure AI evaluation whenever stock is low
+        void this.triggerPredictionUpdate(produitId);
+      }
+    } catch (error) {
+      this.logger.error(`Erreur lors de la vérification de l'alerte stock : ${error.message}`);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -233,10 +261,8 @@ export class FluxDeStockService {
       { isolationLevel: 'Serializable' },
     );
 
-    // Fire-and-forget prediction update for outgoing flows only
-    if (OUTGOING_FLOW_TYPES.includes(createFluxDeStockDto.type)) {
-      void this.triggerPredictionUpdate(createFluxDeStockDto.produitId);
-    }
+    // Trigger stock alert check (which now also triggers AI if needed)
+    void this.checkAndAlertStockBas(createFluxDeStockDto.produitId);
 
     return fluxResult;
   }
@@ -381,6 +407,10 @@ export class FluxDeStockService {
       { isolationLevel: 'Serializable' },
     );
 
+    // Trigger stock alert checks for both warehouses (though total global stock might not change, 
+    // it's good practice to verify if we ever want per-warehouse alerts)
+    void this.checkAndAlertStockBas(dto.produitId);
+
     return result;
   }
 
@@ -431,7 +461,7 @@ export class FluxDeStockService {
   }
 
   async update(id: string, updateFluxDeStockDto: UpdateFluxDeStockDto) {
-    return this.prisma.$transaction(
+    const updateResult = await this.prisma.$transaction(
       async (tx) => {
         const existingFlux = await tx.fluxDeStock.findUnique({
           where: { id },
@@ -500,7 +530,7 @@ export class FluxDeStockService {
           update: { quantite: { increment: netDelta } },
         });
 
-        return tx.fluxDeStock.update({
+        const result = await tx.fluxDeStock.update({
           where: { id },
           data: {
             quantite: updateFluxDeStockDto.quantite,
@@ -516,13 +546,20 @@ export class FluxDeStockService {
             creerPar: { select: { id: true, name: true, email: true } },
           },
         });
+
+        return result;
       },
       { isolationLevel: 'Serializable' },
     );
+
+    // Trigger stock alert check
+    void this.checkAndAlertStockBas(updateFluxDeStockDto.produitId || (await this.findOne(id)).produitId);
+
+    return updateResult;
   }
 
   async remove(id: string) {
-    return this.prisma.$transaction(
+    const deleteResult = await this.prisma.$transaction(
       async (tx) => {
         const flux = await tx.fluxDeStock.findUnique({
           where: { id },
@@ -564,9 +601,15 @@ export class FluxDeStockService {
           update: { quantite: { increment: reversedDelta } },
         });
 
-        return tx.fluxDeStock.delete({ where: { id } });
+        const deletedFlux = await tx.fluxDeStock.delete({ where: { id } });
+        return deletedFlux;
       },
       { isolationLevel: 'Serializable' },
     );
+
+    // Trigger stock alert check
+    void this.checkAndAlertStockBas(deleteResult.produitId);
+
+    return deleteResult;
   }
 }

@@ -11,6 +11,10 @@ export function getWebSocketBaseUrl(): string {
     return apiUrl.replace(/\/api\/?$/, '').replace(/\/$/, '');
   }
 
-  // Relative /api — same origin; Vite (dev) or reverse proxy forwards /socket.io
+  // In development, connect directly to the NestJS backend (port 3000)
+  if (import.meta.env.DEV) {
+    return 'http://localhost:3000';
+  }
+
   return window.location.origin;
 }

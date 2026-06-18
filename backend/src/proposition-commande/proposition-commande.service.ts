@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { PredictionService } from '../ai/prediction/prediction.service';
 import { EtatCommande, StatutProposition, Prisma } from '@prisma/client';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 const WEIGHT_PRICE = 0.7;
 const WEIGHT_DELIVERY = 0.3;
@@ -26,6 +27,7 @@ export class PropositionCommandeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly predictionService: PredictionService,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────
@@ -155,6 +157,10 @@ export class PropositionCommandeService {
         `✅ Proposition created for "${produit.nom}": qty=${predictionResult.quantiteRecommande}, ` +
           `supplier="${bestSupplier.fournisseurNom}" (score=${bestSupplier.score})`,
       );
+
+      // Trigger notification
+      this.notificationsGateway.alertNouvelleProposition(produit.nom, predictionResult.quantiteRecommande);
+
       return proposition;
     } catch (error) {
       if (error instanceof Error && error.message.includes('could not serialize')) {

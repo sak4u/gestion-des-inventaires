@@ -206,8 +206,23 @@ export default function CommandesPage() {
       <BarcodeScanner
         open={showScanner}
         onClose={() => setShowScanner(false)}
-        onScan={(code) => { setScannedCode(code); setShowScanner(false); }}
-        title="Scanner le produit recu"
+        onScan={(code) => {
+          setShowScanner(false);
+          // Trouver les commandes qui contiennent ce code-barre
+          const matches = commandes.filter(c =>
+            (c.commandesLigne ?? []).some(l =>
+              (l as any).produit?.codeBare?.toLowerCase() === code.toLowerCase()
+            )
+          );
+          if (matches.length === 1) {
+            // Une seule commande → aller directement à sa page
+            navigate(`/commandes/${matches[0].id}`);
+          } else {
+            // Plusieurs ou aucune → filtrer la liste
+            setScannedCode(code);
+          }
+        }}
+        title="Scanner le produit reçu"
       />
     </div>
   );

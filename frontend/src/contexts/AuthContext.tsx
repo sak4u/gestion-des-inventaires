@@ -1,10 +1,7 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  type ReactNode,
-} from 'react';
+import * as React from 'react';
+
+const { createContext, useContext, useState, useEffect } = React;
+type ReactNode = React.ReactNode;
 
 interface Role {
   id: string;
@@ -54,13 +51,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const login = (newToken: string, newUser: User) => {
+    localStorage.setItem('access_token', newToken);
+    localStorage.setItem('user', JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
+    window.dispatchEvent(new Event('auth_update'));
   };
 
   const logout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
     setToken(null);
     setUser(null);
+    window.dispatchEvent(new Event('auth_update'));
     window.location.href = '/login';
   };
 
