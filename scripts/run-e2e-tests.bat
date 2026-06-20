@@ -19,23 +19,28 @@ REM
 REM  Prérequis :
 REM    - Backend  actif sur http://localhost:3000
 REM    - Frontend actif sur http://localhost:5173
-REM    - Python   3.13 installé dans C:\python313\
+REM    - Python   3.13+
 REM    - pip install -r requirements.txt
 REM
 REM  Rapports générés :
-REM    - reports/allure-results/  → Rapport Allure (Jenkins plugin)
+REM    - reports/allure-results/  → Rapport Allure
 REM    - reports/report.html      → Rapport HTML pytest
 REM    - reports/junit-e2e.xml    → Rapport JUnit (Jenkins)
 REM
 REM  Usage : run-e2e-tests.bat [--headless] [--suite LOGIN|PRODUITS|ALL]
-REM          run-e2e-tests.bat --suite SMOKE   (tests rapides seulement)
+REM          run-e2e-tests.bat --suite SMOKE
+REM
+REM  Jenkins : définir SELENIUM_DIR et PYTHON avant d'appeler ce script
+REM    set SELENIUM_DIR=%WORKSPACE%\selenium-tests
+REM    set PYTHON=C:\python313\python.exe
+REM    call scripts\run-e2e-tests.bat --headless --suite ALL
 REM ═══════════════════════════════════════════════════════════════════════════
 
 setlocal EnableDelayedExpansion
 
-REM ── Configuration ──────────────────────────────────────────────────────────
-set SELENIUM_DIR=C:\Users\mohamed sakly\Desktop\Gestion des inventaires\selenium-tests
-set PYTHON=C:\python313\python.exe
+REM ── Configuration (surchargeable par variables d'environnement) ────────────
+if "%SELENIUM_DIR%"=="" set SELENIUM_DIR=C:\Users\mohamed sakly\Desktop\Gestion des inventaires\selenium-tests
+if "%PYTHON%"==""       set PYTHON=C:\python313\python.exe
 set REPORTS_DIR=%SELENIUM_DIR%\reports
 set ALLURE_DIR=%REPORTS_DIR%\allure-results
 set ALLURE_REPORT=%REPORTS_DIR%\allure-report
@@ -63,6 +68,8 @@ echo.
 echo ╔═══════════════════════════════════════════════════════════════╗
 echo ║         TESTS E2E SELENIUM — Gestion des Inventaires          ║
 echo ║         Démarré le %DATE% à %TIME%                            ║
+echo ║         Selenium   : %SELENIUM_DIR%                           ║
+echo ║         Python     : %PYTHON%                                 ║
 echo ╚═══════════════════════════════════════════════════════════════╝
 echo.
 echo [INFO] Suite   : %SUITE%
@@ -79,7 +86,7 @@ echo └────────────────────────
 REM Vérifier Python
 if not exist "%PYTHON%" (
     echo [ERREUR] Python introuvable : %PYTHON%
-    echo          Installez Python 3.13 ou modifiez la variable PYTHON.
+    echo          Installez Python 3.13 ou définissez la variable PYTHON.
     exit /b 1
 )
 echo [OK] Python trouvé : %PYTHON%
@@ -87,6 +94,7 @@ echo [OK] Python trouvé : %PYTHON%
 REM Vérifier le répertoire Selenium
 if not exist "%SELENIUM_DIR%" (
     echo [ERREUR] Répertoire introuvable : %SELENIUM_DIR%
+    echo          Vérifiez la variable SELENIUM_DIR.
     exit /b 1
 )
 echo [OK] Répertoire Selenium : %SELENIUM_DIR%

@@ -16,12 +16,16 @@ REM    - test/reports/newman-report.html   (Newman HTML)
 REM    - test/reports/junit-api.xml        (JUnit pour Jenkins)
 REM
 REM  Usage : run-api-tests.bat [--skip-postman] [--coverage]
+REM
+REM  Jenkins : définir BACKEND_DIR avant d'appeler ce script
+REM    set BACKEND_DIR=%WORKSPACE%\backend
+REM    call scripts\run-api-tests.bat --skip-postman
 REM ═══════════════════════════════════════════════════════════════════════════
 
 setlocal EnableDelayedExpansion
 
-REM ── Configuration ──────────────────────────────────────────────────────────
-set BACKEND_DIR=C:\Users\mohamed sakly\Desktop\Gestion des inventaires\backend
+REM ── Configuration (surchargeable par variable d'environnement) ────────────
+if "%BACKEND_DIR%"=="" set BACKEND_DIR=C:\Users\mohamed sakly\Desktop\Gestion des inventaires\backend
 set REPORTS_DIR=%BACKEND_DIR%\test\reports
 set COVERAGE_DIR=%BACKEND_DIR%\coverage
 set LOG_FILE=%REPORTS_DIR%\api-tests-%DATE:~-4%-%DATE:~3,2%-%DATE:~0,2%.log
@@ -45,6 +49,7 @@ echo.
 echo ╔═══════════════════════════════════════════════════════════════╗
 echo ║         TESTS API — Gestion des Inventaires                   ║
 echo ║         Démarré le %DATE% à %TIME%                            ║
+echo ║         Répertoire : %BACKEND_DIR%                            ║
 echo ╚═══════════════════════════════════════════════════════════════╝
 echo.
 

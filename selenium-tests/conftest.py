@@ -14,9 +14,26 @@ import config
 def pytest_configure(config):
     """Génère le fichier environment.properties pour Allure."""
     import os
+    import shutil
     allure_dir = config.getoption('--alluredir')
     if allure_dir:
-        os.makedirs(allure_dir, exist_ok=True)
+        # Nettoyage préalable du répertoire Allure (évite les conflits de fichiers sur Windows)
+        if os.path.exists(allure_dir):
+            try:
+                for fname in os.listdir(allure_dir):
+                    fpath = os.path.join(allure_dir, fname)
+                    try:
+                        if os.path.isfile(fpath):
+                            os.remove(fpath)
+                        elif os.path.isdir(fpath):
+                            shutil.rmtree(fpath, ignore_errors=True)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        else:
+            os.makedirs(allure_dir, exist_ok=True)
+        
         import config as test_config
         env_file = os.path.join(allure_dir, 'environment.properties')
         try:

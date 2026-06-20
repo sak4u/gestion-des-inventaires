@@ -7,11 +7,15 @@ pipeline {
         BACKEND_URL    = 'http://localhost:3000'
         FRONTEND_URL   = 'http://localhost:5173'
     }
+    triggers {
+        pollSCM('')  // Déclenché par le webhook GitHub push
+    }
     options {
         buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
         timeout(time: 30, unit: 'MINUTES')
         disableConcurrentBuilds()
         ansiColor('xterm')
+        timestamps()
     }
     parameters {
         booleanParam(
@@ -32,6 +36,19 @@ pipeline {
     }
 
     stages {
+        stage('Filter Changes') {
+            when {
+                allOf {
+                    expression { env.BUILD_NUMBER != '1' }
+                    not { anyOf { changeset "selenium-tests/**"; changeset "frontend/**"; changeset "Jenkinsfile.e2e" } }
+                }
+            }
+            steps {
+                echo '  \u2716 Aucun changement dans selenium-tests/, frontend/ ou Jenkinsfile.e2e — pipeline ignoré'
+                error('Pipeline arrêté : seuls les changements dans selenium-tests/, frontend/ ou Jenkinsfile.e2e déclenchent ce job')
+            }
+        }
+
         stage('Environment Check') {
             steps {
                 bat """
@@ -95,7 +112,9 @@ pipeline {
                             mkdir "reports\\allure-results" > nul 2>&1
                         )
                         "%PYTHON%" -m pytest tests/ ${suiteMarker} --alluredir=reports\\allure-results --html=reports\\report.html --self-contained-html --junitxml=reports\\junit-e2e.xml -q --tb=line
-                        exit /b 0
+                        set E2E_EXIT_CODE=!errorlevel!
+                        echo [INFO] pytest exit code: !E2E_EXIT_CODE!
+                        exit /b !E2E_EXIT_CODE!
                     """
                 }
             }

@@ -13,12 +13,12 @@ class LoginPage(BasePage):
 
     # ── Actions ────────────────────────────────────────────────────
     def open(self):
+        # Aller d'abord sur le login pour avoir accès à localStorage (même origine)
         self.goto("/login")
-        try:
-            self.driver.execute_script("localStorage.clear(); sessionStorage.clear();")
-            self.goto("/login")
-        except Exception:
-            pass
+        self.driver.execute_script("localStorage.clear(); sessionStorage.clear();")
+        # Recharger la page : force React à se réinitialiser complètement
+        # sans état résiduel entre les tests (important avec driver session-scoped)
+        self.driver.refresh()
         self.find(*self.EMAIL_INPUT)
 
     def enter_email(self, email: str):

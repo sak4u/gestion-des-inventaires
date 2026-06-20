@@ -10,11 +10,15 @@ pipeline {
         DB_URL_TEST     = credentials('DB_URL_TEST')
         JWT_SECRET_TEST = credentials('JWT_SECRET_TEST')
     }
+    triggers {
+        pollSCM('')  // Déclenché par le webhook GitHub push
+    }
     options {
         buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
         timeout(time: 20, unit: 'MINUTES')
         disableConcurrentBuilds()
         ansiColor('xterm')
+        timestamps()
     }
     parameters {
         booleanParam(
@@ -35,6 +39,19 @@ pipeline {
     }
 
     stages {
+        stage('Filter Changes') {
+            when {
+                allOf {
+                    expression { env.BUILD_NUMBER != '1' }
+                    not { anyOf { changeset "backend/**"; changeset "Jenkinsfile.api" } }
+                }
+            }
+            steps {
+                echo '  \u2716 Aucun changement dans backend/ ou Jenkinsfile.api — pipeline ignoré'
+                error('Pipeline arrêté : seuls les changements dans backend/ ou Jenkinsfile.api déclenchent ce job')
+            }
+        }
+
         stage('Environment Check') {
             steps {
                 bat """
@@ -114,7 +131,7 @@ pipeline {
                     npx prisma db push --force-reset --accept-data-loss
 
                     :: Injecter les donnees de test (users, produits, fournisseurs, entrepots...)
-                    npx ts-node prisma/seed.ts
+                    npx ts-node prisma/seed-minimal.ts
 
                     :: Lancer les tests E2E Supertest
                     set JEST_JUNIT_OUTPUT_DIR=test\\reports

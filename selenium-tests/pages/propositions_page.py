@@ -8,7 +8,7 @@ class PropositionsPage(BasePage):
     TABLE_ROWS   = (By.CSS_SELECTOR, ".data-table tbody tr")
     BTN_ACCEPTER = (By.XPATH, "//button[contains(text(),'Accepter')]")
     BTN_REFUSER  = (By.XPATH, "//button[contains(text(),'Refuser')]")
-    FILTER_ALL   = (By.XPATH, "//button[text()='Toutes']")
+    FILTER_ALL   = (By.XPATH, "//select[.//option[contains(text(),'tous')]]")
     MODAL        = (By.CSS_SELECTOR, ".modal-title")
     EMPTY_STATE  = (By.CSS_SELECTOR, "[class*='empty'], .empty-state")
 

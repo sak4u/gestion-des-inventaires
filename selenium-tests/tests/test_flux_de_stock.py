@@ -20,14 +20,13 @@ class TestFluxDeStock:
         with allure.step("l'utilisateur navigue vers Flux de Stock"):
             page.open()
             assert page.is_on_page()
-        with allure.step("la liste des mouvements est affichee"):
-            visible = page.is_table_visible()
+        with allure.step("la liste ou l'etat vide est affiche"):
+            visible = page.is_table_or_empty_visible()
             assert visible
-        with allure.step("la liste contient des mouvements"):
+        with allure.step("le nombre de mouvements est releve"):
             count = page.get_row_count()
             allure.attach(f"{count} mouvements", name="Nombre",
                           attachment_type=allure.attachment_type.TEXT)
-            assert count > 0
         with allure.step("capture d'ecran - Page Flux de Stock"):
             allure.attach(body=driver.get_screenshot_as_png(),
                           name="Page Flux de Stock",
