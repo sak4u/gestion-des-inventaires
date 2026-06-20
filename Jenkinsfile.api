@@ -170,33 +170,34 @@ pipeline {
                 bat """
                     cd /d "%BACKEND_DIR%"
                     
-                    echo [BDD] D�marrage du serveur NestJS en arri�re-plan...
-                    :: D�marrer le serveur sur le port 3000
-                    start /B cmd /c "npm run start:dev > server.log 2>&1"
+                    echo [BDD] DÃ©marrage du serveur NestJS en arriÃ¨re-plan...
+                    :: DÃ©marrer le serveur avec un titre de fenÃªtre unique
+                    start "NestJS-Server" cmd /c "npm run start:dev > server.log 2>&1"
                     
-                    echo [BDD] Attente que le serveur soit pr�t sur localhost:3000...
-                    :: V�rifier la connexion TCP jusqu'� ce que le serveur r�ponde (max 60s)
+                    echo [BDD] Attente que le serveur soit prÃªt sur localhost:3000...
+                    :: VÃ©rifier la connexion TCP jusqu'Ã  ce que le serveur rÃ©ponde (max 60s)
                     for /l %%i in (1,1,20) do (
                         timeout /t 3 /nobreak > nul
                         powershell -Command "try { \$tcp = New-Object System.Net.Sockets.TcpClient; \$tcp.Connect('localhost', 3000); \$tcp.Close(); exit 0 } catch { exit 1 }"
                         if not errorlevel 1 goto :server_ready
                     )
-                    echo [BDD] ERREUR: Serveur non d�marr� apr�s 60 secondes
+                    echo [BDD] ERREUR: Serveur non dÃ©marrÃ© aprÃ¨s 60 secondes
                     type server.log 2> nul
+                    taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
                     exit /b 1
                     
                     :server_ready
-                    echo [BDD] Serveur pr�t !
+                    echo [BDD] Serveur prÃªt !
                     
-                    :: Exécuter les tests BDD Cucumber
-                    echo [BDD] Lancement des scénarios Cucumber...
+                    :: ExÃ©cuter les tests BDD Cucumber
+                    echo [BDD] Lancement des scÃ©narios Cucumber...
                     npm run test:bdd:ci
                     set BDD_EXIT=%ERRORLEVEL%
                     
-                    :: Arrêter le serveur (toujours, m�me si les tests �chouent)
-                    echo [BDD] Arrêt du serveur...
-                    taskkill /F /IM node.exe > nul 2>&1
-                    echo [BDD] Arrêt terminé
+                    :: ArrÃªter le serveur proprement (par titre de fenÃªtre)
+                    echo [BDD] ArrÃªt du serveur...
+                    taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
+                    echo [BDD] ArrÃªt terminÃ©
                     
                     :: Retourner le code du test BDD
                     exit /b %BDD_EXIT%
