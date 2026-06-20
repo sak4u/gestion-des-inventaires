@@ -177,7 +177,7 @@ pipeline {
                     
                     echo [BDD] Attente que le serveur soit pret sur localhost:3000 (max 90s)...
                     :: Boucle PowerShell pure sur UNE SEULE LIGNE (evite le decoupage batch de Jenkins)
-                    powershell -Command "\$t=90;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',3000);\$c.Close();Write-Host '[BDD] OK';exit 0}catch{Write-Host \"[BDD] Attend... (\$e s)\";Start-Sleep -Seconds 5;\$e+=5}}Write-Host '[BDD] TIMEOUT 90s';exit 1"
+                    powershell -Command "\$t=90;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',3000);\$c.Close();Write-Host '[BDD] OK';exit 0}catch{Write-Host '[BDD] Attend...';Start-Sleep -Seconds 5;\$e+=5}}Write-Host '[BDD] TIMEOUT 90s';exit 1"
                     if errorlevel 1 (
                         echo [BDD] ERREUR: Serveur non demarre — voir server.log:
                         type server.log
