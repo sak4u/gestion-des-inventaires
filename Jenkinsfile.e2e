@@ -121,6 +121,7 @@ pipeline {
                 }
 
                 bat """
+                    @echo off
                     REM ========== 1. BACKEND NESTJS ==========
                     cd /d "%BACKEND_DIR%"
                     echo [E2E] Installation des dependances backend...
@@ -148,17 +149,17 @@ pipeline {
 
                     REM ========== 3. ATTENTE DES SERVICES ==========
                     echo [E2E] Attente du backend (port 3000, max 120s)...
-                    powershell -Command "\$t=120;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',3000);\$c.Close();Write-Host '[E2E] Backend OK';exit 0}catch{Start-Sleep -Seconds 5;\$e+=5}}exit 1"
+                    powershell -Command "$t=120;$e=0;while($e -lt $t){try{$c=New-Object System.Net.Sockets.TcpClient;$c.Connect('localhost',3000);$c.Close();Write-Host '[E2E] Backend OK';exit 0}catch{Start-Sleep -Seconds 5;$e+=5}}exit 1"
                     if errorlevel 1 (
-                        echo [E2E] ERREUR: Backend non demarre - voir "%BACKEND_DIR%"\server.log
+                        echo [E2E] ERREUR: Backend non demarre
                         taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
                         exit /b 1
                     )
 
                     echo [E2E] Attente du frontend (port 5173, max 120s)...
-                    powershell -Command "\$t=120;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',5173);\$c.Close();Write-Host '[E2E] Frontend OK';exit 0}catch{Start-Sleep -Seconds 5;\$e+=5}}exit 1"
+                    powershell -Command "$t=120;$e=0;while($e -lt $t){try{$c=New-Object System.Net.Sockets.TcpClient;$c.Connect('localhost',5173);$c.Close();Write-Host '[E2E] Frontend OK';exit 0}catch{Start-Sleep -Seconds 5;$e+=5}}exit 1"
                     if errorlevel 1 (
-                        echo [E2E] ERREUR: Frontend non demarre - voir "%FRONTEND_DIR%"\frontend.log
+                        echo [E2E] ERREUR: Frontend non demarre
                         taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
                         taskkill /F /FI "WINDOWTITLE eq Vite-Server*" > nul 2>&1
                         exit /b 1
@@ -166,12 +167,13 @@ pipeline {
 
                     REM ========== 4. TESTS SELENIUM ==========
                     cd /d "%SELENIUM_DIR%"
-                    if exist "reports\allure-results" (
-                        rmdir /s /q "reports\allure-results" > nul 2>&1
-                        mkdir "reports\allure-results" > nul 2>&1
+                    if exist "reports" (
+                        rmdir /s /q "reports" > nul 2>&1
+                        mkdir "reports" > nul 2>&1
+                        mkdir "reports\\allure-results" > nul 2>&1
                     )
                     echo [E2E] Lancement des tests Selenium...
-                    "%PYTHON%" -m pytest tests/ %SUITE_MARKER% --alluredir=reports\allure-results --html=reports\report.html --self-contained-html --junitxml=reports\junit-e2e.xml -q --tb=line
+                    "%PYTHON%" -m pytest tests/ %SUITE_MARKER% --alluredir=reports\\allure-results --html=reports\\report.html --self-contained-html --junitxml=reports\\junit-e2e.xml -q --tb=line
                     set E2E_EXIT_CODE=%ERRORLEVEL%
                     echo [E2E] pytest exit code: %E2E_EXIT_CODE%
 
