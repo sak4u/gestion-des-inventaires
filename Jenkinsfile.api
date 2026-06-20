@@ -170,36 +170,47 @@ pipeline {
                 bat """
                     cd /d "%BACKEND_DIR%"
                     
-                    echo [BDD] DÃ©marrage du serveur NestJS en arriÃ¨re-plan...
-                    :: DÃ©marrer le serveur avec un titre de fenÃªtre unique
+                    echo [BDD] Demarrage du serveur NestJS en arriere-plan...
                     start "NestJS-Server" cmd /c "npm run start:dev > server.log 2>&1"
                     
-                    echo [BDD] Attente que le serveur soit prÃªt sur localhost:3000...
-                    :: VÃ©rifier la connexion TCP jusqu'Ã  ce que le serveur rÃ©ponde (max 60s)
-                    for /l %%i in (1,1,20) do (
-                        timeout /t 3 /nobreak > nul
-                        powershell -Command "try { \$tcp = New-Object System.Net.Sockets.TcpClient; \$tcp.Connect('localhost', 3000); \$tcp.Close(); exit 0 } catch { exit 1 }"
-                        if not errorlevel 1 goto :server_ready
+                    echo [BDD] Attente que le serveur soit pret sur localhost:3000 (max 90s)...
+                    :: Boucle PowerShell pure (evite les problemes de timeout + for en Session 0)
+                    powershell -Command "
+                        \$timeout = 90;
+                        \$elapsed = 0;
+                        while (\$elapsed -lt \$timeout) {
+                            try {
+                                \$tcp = New-Object System.Net.Sockets.TcpClient;
+                                \$tcp.Connect('localhost', 3000);
+                                \$tcp.Close();
+                                Write-Host '[BDD] Serveur pret sur le port 3000';
+                                exit 0;
+                            } catch {
+                                Write-Host "[BDD] Attente... (\$elapsed s)";
+                                Start-Sleep -Seconds 5;
+                                \$elapsed += 5;
+                            }
+                        }
+                        Write-Host '[BDD] ERREUR: Serveur non demarre apres 90 secondes';
+                        exit 1;
+                    "
+                    if errorlevel 1 (
+                        echo [BDD] ERREUR: Serveur non demarre — voir server.log:
+                        type server.log
+                        taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
+                        exit /b 1
                     )
-                    echo [BDD] ERREUR: Serveur non dÃ©marrÃ© aprÃ¨s 60 secondes
-                    type server.log 2> nul
-                    taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
-                    exit /b 1
                     
-                    :server_ready
-                    echo [BDD] Serveur prÃªt !
-                    
-                    :: ExÃ©cuter les tests BDD Cucumber
-                    echo [BDD] Lancement des scÃ©narios Cucumber...
+                    :: Executer les tests BDD Cucumber
+                    echo [BDD] Lancement des scenarios Cucumber...
                     npm run test:bdd:ci
                     set BDD_EXIT=%ERRORLEVEL%
                     
-                    :: ArrÃªter le serveur proprement (par titre de fenÃªtre)
-                    echo [BDD] ArrÃªt du serveur...
+                    :: Arreter le serveur proprement (par titre de fenetre)
+                    echo [BDD] Arret du serveur...
                     taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
-                    echo [BDD] ArrÃªt terminÃ©
+                    echo [BDD] Arret termine
                     
-                    :: Retourner le code du test BDD
                     exit /b %BDD_EXIT%
                 """
             }
