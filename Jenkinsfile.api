@@ -83,6 +83,8 @@ pipeline {
                     cd /d "%BACKEND_DIR%"
                     npm install --prefer-offline 2>&1
                     if not exist "test\\reports" mkdir "test\\reports" > nul 2>&1
+                    :: Générer le client Prisma (nécessaire pour les enums dans les tests)
+                    npx prisma generate
                 """
             }
             post {
