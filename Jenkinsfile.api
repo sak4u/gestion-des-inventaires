@@ -129,6 +129,9 @@ pipeline {
                 bat """
                     cd /d "%BACKEND_DIR%"
 
+                    :: Charger DATABASE_URL depuis le fichier .env.test créé dans Prepare Environment
+                    set DATABASE_URL=%DB_URL_TEST%
+
                     :: Appliquer le schema Prisma sur la DB de test
                     npx prisma db push --force-reset --accept-data-loss
 
