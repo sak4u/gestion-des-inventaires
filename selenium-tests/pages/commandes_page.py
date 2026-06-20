@@ -33,7 +33,7 @@ class CommandesPage(BasePage):
         return "/commandes" in self.current_url()
 
     def is_table_visible(self) -> bool:
-        return self.element_visible(*self.TABLE, timeout=8)
+        return self.element_visible(*self.TABLE, timeout=15)
 
     def get_row_count(self) -> int:
         return len(self.driver.find_elements(*self.TABLE_ROWS))

@@ -78,11 +78,10 @@ class TestFluxDeStock:
                           name="Bouton Export CSV Flux",
                           attachment_type=allure.attachment_type.PNG)
 
-    # ── ECHEC ─────────────────────────────────────────────────────
+    # ── XPASS (corrigé) ──
     @allure.story("Acces refuse")
-    @allure.title("ECHEC - Le role ACHAT ne peut pas acceder aux flux de stock")
+    @allure.title("PASS - Le role ACHAT est redirige depuis /flux-de-stock")
     @allure.severity(allure.severity_level.NORMAL)
-    @pytest.mark.xfail(strict=False, reason="ECHEC VOULU")
     def test_echec_acces_flux_role_achat(self, driver, login):
         from pages.flux_page import FluxPage as FP
         page = FP(driver)

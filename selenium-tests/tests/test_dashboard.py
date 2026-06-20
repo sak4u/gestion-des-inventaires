@@ -122,11 +122,10 @@ class TestDashboard:
                           name="Navigation Utilisateurs",
                           attachment_type=allure.attachment_type.PNG)
 
-    # ── ECHEC ─────────────────────────────────────────────────────
+    # ── XPASS (corrigé) ──
     @allure.story("Acces refuse")
-    @allure.title("ECHEC - Un non-ADMIN ne peut pas acceder aux Utilisateurs")
+    @allure.title("PASS - Un non-ADMIN est redirige depuis /utilisateurs")
     @allure.severity(allure.severity_level.CRITICAL)
-    @pytest.mark.xfail(strict=False, reason="ECHEC VOULU")
     def test_echec_acces_dashboard_non_admin(self, driver, login):
         page = DashboardPage(driver)
         with allure.step("connexion en tant que gestionnaire ACHAT"):

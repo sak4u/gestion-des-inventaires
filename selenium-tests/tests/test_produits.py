@@ -134,11 +134,10 @@ class TestProduits:
                 attachment_type=allure.attachment_type.PNG,
             )
 
-    # ── ECHEC ─────────────────────────────────────────────────────
+    # ── XPASS (corrigé) ──
     @allure.story("Produit inexistant")
-    @allure.title("ECHEC - Acceder a un produit avec ID invalide retourne 404")
+    @allure.title("PASS - Acceder a un produit avec ID invalide affiche une erreur")
     @allure.severity(allure.severity_level.NORMAL)
-    @pytest.mark.xfail(strict=False, reason="ECHEC VOULU")
     def test_echec_produit_id_invalide(self, driver):
         page = ProduitsPage(driver)
         with allure.step("l'utilisateur navigue vers un produit inexistant"):

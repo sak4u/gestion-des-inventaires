@@ -90,11 +90,10 @@ class TestUtilisateurs:
         with allure.step("reconnexion en tant qu'admin"):
             login("admin")
 
-    # ── ECHEC ─────────────────────────────────────────────────────
+    # ── XPASS (corrigé) ──
     @allure.story("Creer un utilisateur")
-    @allure.title("ECHEC - Creer un utilisateur avec email deja utilise")
+    @allure.title("PASS - Creer un utilisateur avec email deja utilise affiche une erreur")
     @allure.severity(allure.severity_level.NORMAL)
-    @pytest.mark.xfail(strict=False, reason="ECHEC VOULU")
     def test_echec_creer_utilisateur_email_existant(self, driver):
         page = UtilisateursPage(driver)
         with allure.step("l'utilisateur ouvre la page Utilisateurs"):

@@ -46,8 +46,8 @@ def pytest_configure(config):
             pass
 
 
-# ── Driver fixture (session) ───────────────────────────────────────────────────
-@pytest.fixture(scope="session")
+# ── Driver fixture (function) ── chaque test a sa propre session Chrome ──
+@pytest.fixture(scope="function")
 def driver():
     options = Options()
     if config.HEADLESS:
@@ -149,7 +149,7 @@ def _force_login(driver, role: str):
             wait.until(EC.url_contains("/dashboard"))
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def login(driver):
     def _do_login(role: str = "admin"):
         _force_login(driver, role)
