@@ -93,7 +93,8 @@ pipeline {
             }
             post {
                 success { echo '\u001B[32m  \u2714 E2E API — backend & frontend accessibles\u001B[0m' }
-                failure { echo '\u001B[33m  \u26A0 E2E API — backend/frontend unreachable (tests Selenium ignores)\u001B[0m' }
+                unstable { echo '\u001B[33m  \u26A0 E2E API — backend/frontend unreachable (tests Selenium ignores)\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 E2E API — erreur inattendue\u001B[0m' }
             }
         }
 
