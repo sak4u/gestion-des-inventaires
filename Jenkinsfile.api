@@ -172,11 +172,16 @@ pipeline {
                 bat """
                     cd /d "%BACKEND_DIR%"
                     
-                    echo [BDD] Demarrage du serveur NestJS en arriere-plan...
                     :: Definir JWT_SECRET et DATABASE_URL dans l'environnement (NestJS lit process.env directement, pas .env)
                     set JWT_SECRET=%JWT_SECRET_TEST%
                     set DATABASE_URL=%DB_URL_TEST%
+
+                    :: Injecter les donnees de test dans la DB (utilisateurs, produits, etc.)
+                    echo [BDD] Injection des donnees de test...
+                    npx ts-node prisma/seed-minimal.ts
+
                     :: Demarrer le serveur (le child process herite des variables d'env du parent)
+                    echo [BDD] Demarrage du serveur NestJS en arriere-plan...
                     start "NestJS-Server" cmd /c "npm run start:dev > server.log 2>&1"
                     
                     echo [BDD] Attente que le serveur soit pret sur localhost:3000 (max 90s)...
