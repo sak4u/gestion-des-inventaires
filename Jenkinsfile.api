@@ -191,10 +191,11 @@ pipeline {
                     set BDD_EXIT=%ERRORLEVEL%
                     
                     :: Executer les tests Newman (serveur encore actif)
+                    :: Note: on ne surcharge BDD_EXIT que si Newman echoue (pour ne pas masquer un echec BDD)
                     if /i "%RUN_NEWMAN%"=="true" (
                         echo [BDD] Lancement des tests Newman...
                         npm run test:postman
-                        set BDD_EXIT=%ERRORLEVEL%
+                        if errorlevel 1 set BDD_EXIT=%ERRORLEVEL%
                     )
                     
                     :: Arreter le serveur proprement (par titre de fenetre)
