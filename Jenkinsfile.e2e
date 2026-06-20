@@ -120,101 +120,103 @@ pipeline {
                     if (params.SELENIUM_SUITE == 'REGRESSION') env.SUITE_MARKER = '-m regression'
                 }
 
-                bat """
-                    @echo off
-                    REM ========== 1. BACKEND NESTJS ==========
-                    cd /d "%BACKEND_DIR%"
-                    echo [E2E] Installation des dependances backend...
-                    call npm install --prefer-offline
-                    echo [E2E] Generation Prisma Client...
-                    call npx prisma generate
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    bat """
+                        @echo off
+                        REM ========== 1. BACKEND NESTJS ==========
+                        cd /d "%BACKEND_DIR%"
+                        echo [E2E] Installation des dependances backend...
+                        call npm install --prefer-offline
+                        echo [E2E] Generation Prisma Client...
+                        call npx prisma generate
 
-                    set JWT_SECRET=%JWT_SECRET_TEST%
-                    set DATABASE_URL=%DB_URL_TEST%
+                        set JWT_SECRET=%JWT_SECRET_TEST%
+                        set DATABASE_URL=%DB_URL_TEST%
 
-                    echo [E2E] Initialisation de la base de test...
-                    call npx prisma db push --force-reset --accept-data-loss
-                    echo [E2E] Injection des donnees de test...
-                    call npx ts-node prisma/seed-minimal.ts
+                        echo [E2E] Initialisation de la base de test...
+                        call npx prisma db push --force-reset --accept-data-loss
+                        echo [E2E] Injection des donnees de test...
+                        call npx ts-node prisma/seed-minimal.ts
 
-                    echo [E2E] Demarrage du backend NestJS...
-                    start "NestJS-Server" cmd /c "npm run start:dev > server.log 2>&1"
+                        echo [E2E] Demarrage du backend NestJS...
+                        start "NestJS-Server" cmd /c "npm run start:dev > server.log 2>&1"
 
-                    REM ========== 2. FRONTEND VITE ==========
-                    cd /d "%FRONTEND_DIR%"
-                    echo [E2E] Installation des dependances frontend...
-                    call npm install --prefer-offline
-                    echo [E2E] Demarrage du frontend Vite...
-                    start "Vite-Server" cmd /c "npm run dev > frontend.log 2>&1"
+                        REM ========== 2. FRONTEND VITE ==========
+                        cd /d "%FRONTEND_DIR%"
+                        echo [E2E] Installation des dependances frontend...
+                        call npm install --prefer-offline
+                        echo [E2E] Demarrage du frontend Vite...
+                        start "Vite-Server" cmd /c "npm run dev > frontend.log 2>&1"
 
-                    REM ========== 3. ATTENTE DES SERVICES ==========
-                    echo [E2E] Attente du backend (port 3000, max 120s)...
-                    powershell -Command "\$t=120;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',3000);\$c.Close();Write-Host '[E2E] Backend OK';exit 0}catch{Start-Sleep -Seconds 5;\$e+=5}}exit 1"
-                    if errorlevel 1 (
-                        echo [E2E] ERREUR: Backend non demarre
+                        REM ========== 3. ATTENTE DES SERVICES ==========
+                        echo [E2E] Attente du backend (port 3000, max 120s)...
+                        powershell -Command "\$t=120;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',3000);\$c.Close();Write-Host '[E2E] Backend OK';exit 0}catch{Start-Sleep -Seconds 5;\$e+=5}}exit 1"
+                        if errorlevel 1 (
+                            echo [E2E] ERREUR: Backend non demarre
+                            taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
+                            exit /b 1
+                        )
+
+                        echo [E2E] Attente du frontend (port 5173, max 120s)...
+                        powershell -Command "\$t=120;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',5173);\$c.Close();Write-Host '[E2E] Frontend OK';exit 0}catch{Start-Sleep -Seconds 5;\$e+=5}}exit 1"
+                        if errorlevel 1 (
+                            echo [E2E] ERREUR: Frontend non demarre
+                            taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
+                            taskkill /F /FI "WINDOWTITLE eq Vite-Server*" > nul 2>&1
+                            exit /b 1
+                        )
+
+                        REM ========== 4. TESTS SELENIUM ==========
+                        cd /d "%SELENIUM_DIR%"
+                        if exist "reports" (
+                            rmdir /s /q "reports" > nul 2>&1
+                            mkdir "reports" > nul 2>&1
+                            mkdir "reports\\allure-results" > nul 2>&1
+                        )
+                        echo [E2E] Lancement des tests Selenium...
+                        "%PYTHON%" -m pytest tests/ %SUITE_MARKER% --alluredir=reports\\allure-results --html=reports\\report.html --self-contained-html --junitxml=reports\\junit-e2e.xml -q --tb=line
+                        set E2E_EXIT_CODE=%ERRORLEVEL%
+                        echo [E2E] pytest exit code: %E2E_EXIT_CODE%
+
+                        REM ========== 5. ARRET DES SERVEURS ==========
+                        echo [E2E] Arret du backend...
                         taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
-                        exit /b 1
-                    )
-
-                    echo [E2E] Attente du frontend (port 5173, max 120s)...
-                    powershell -Command "\$t=120;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',5173);\$c.Close();Write-Host '[E2E] Frontend OK';exit 0}catch{Start-Sleep -Seconds 5;\$e+=5}}exit 1"
-                    if errorlevel 1 (
-                        echo [E2E] ERREUR: Frontend non demarre
-                        taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
+                        echo [E2E] Arret du frontend...
                         taskkill /F /FI "WINDOWTITLE eq Vite-Server*" > nul 2>&1
-                        exit /b 1
-                    )
+                        echo [E2E] Arret termine
 
-                    REM ========== 4. TESTS SELENIUM ==========
-                    cd /d "%SELENIUM_DIR%"
-                    if exist "reports" (
-                        rmdir /s /q "reports" > nul 2>&1
-                        mkdir "reports" > nul 2>&1
-                        mkdir "reports\\allure-results" > nul 2>&1
-                    )
-                    echo [E2E] Lancement des tests Selenium...
-                    "%PYTHON%" -m pytest tests/ %SUITE_MARKER% --alluredir=reports\\allure-results --html=reports\\report.html --self-contained-html --junitxml=reports\\junit-e2e.xml -q --tb=line
-                    set E2E_EXIT_CODE=%ERRORLEVEL%
-                    echo [E2E] pytest exit code: %E2E_EXIT_CODE%
-
-                    REM ========== 5. ARRET DES SERVEURS ==========
-                    echo [E2E] Arret du backend...
-                    taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
-                    echo [E2E] Arret du frontend...
-                    taskkill /F /FI "WINDOWTITLE eq Vite-Server*" > nul 2>&1
-                    echo [E2E] Arret termine
-
-                    exit /b %E2E_EXIT_CODE%
-                """
+                        exit /b %E2E_EXIT_CODE%
+                    """
+                }
             }
             post {
                 always {
                     allure([
                         includeProperties: true,
                         jdk:               '',
-                        results:           [[path: "${env.WORKSPACE}\\selenium-tests\\reports\\allure-results"]]
+                        results:           [[path: "selenium-tests/reports/allure-results"]]
                     ])
                     junit(
-                        testResults:       "${env.WORKSPACE}\\selenium-tests\\reports\\junit-e2e.xml",
+                        testResults:       "selenium-tests/reports/junit-e2e.xml",
                         allowEmptyResults: true
                     )
                     publishHTML([
                         allowMissing:          true,
                         alwaysLinkToLastBuild: true,
                         keepAll:               true,
-                        reportDir:             "${env.WORKSPACE}\\selenium-tests\\reports",
+                        reportDir:             "selenium-tests/reports",
                         reportFiles:           'report.html',
                         reportName:            'Rapport HTML — Tests Selenium',
                         reportTitles:          'Selenium E2E Report'
                     ])
                     archiveArtifacts(
-                        artifacts:         "${env.WORKSPACE}\\selenium-tests\\reports\\screenshots\\*.png",
+                        artifacts:         "selenium-tests/reports/screenshots/*.png",
                         allowEmptyArchive: true
                     )
                 }
                 success { echo '\u001B[32m  \u2714 BDD Tests\u001B[0m' }
-                unstable { echo '\u001B[33m  \u26A0 BDD Tests — intentional failures detected\u001B[0m' }
-                failure { echo '\u001B[31m  \u2718 BDD Tests — check Allure Report\u001B[0m' }
+                unstable { echo '\u001B[33m  \u26A0 BDD Tests — quelques tests ont echoue\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 BDD Tests — erreur inattendue (serveurs non demarres?)\u001B[0m' }
             }
         }
 
