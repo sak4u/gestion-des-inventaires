@@ -103,6 +103,8 @@ pipeline {
             steps {
                 bat """
                     cd /d "%BACKEND_DIR%"
+                    :: Garantir que Prisma Client est genere avant les tests (les enums TypeCommande, EtatCommande viennent de @prisma/client)
+                    npx prisma generate
                     set JEST_JUNIT_OUTPUT_DIR=test\\reports
                     set JEST_JUNIT_OUTPUT_NAME=junit-unit.xml
                     npm run test:ci
