@@ -28,15 +28,6 @@ ou <code>Jenkinsfile.e2e</code> est modifié.
     githubProjectUrl('https://github.com/sak4u/gestion-des-inventaires/')
   }
 
-  // ── Options ──────────────────────────────────────────────────────────────
-  options {
-    buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
-    timeout(time: 30, unit: 'MINUTES')
-    disableConcurrentBuilds()
-    ansiColor('xterm')
-    timestamps()
-  }
-
   // ── Paramètres ───────────────────────────────────────────────────────────
   parameters {
     booleanParam('HEADLESS', true, 'Exécuter Chrome en mode headless (true = sans fenêtre)')

@@ -26,15 +26,6 @@ quand le dossier <code>backend/</code> ou <code>Jenkinsfile.api</code> est modif
     githubProjectUrl('https://github.com/sak4u/gestion-des-inventaires/')
   }
 
-  // ── Options ──────────────────────────────────────────────────────────────
-  options {
-    buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
-    timeout(time: 20, unit: 'MINUTES')
-    disableConcurrentBuilds()
-    ansiColor('xterm')
-    timestamps()
-  }
-
   // ── Paramètres ───────────────────────────────────────────────────────────
   parameters {
     booleanParam('WITH_COVERAGE', true,  'Générer le rapport de couverture de code (lcov)')
