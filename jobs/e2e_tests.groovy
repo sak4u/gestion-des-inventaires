@@ -7,7 +7,7 @@
  * Usage (seed job) :
  *   jobDsl targets: ['jobs/e2e-tests.groovy']
  *
- * Ou manuellement depuis Jenkins :
+ * Usage manuel :
  *   Nouveau Item → Pipeline → Pipeline from SCM → coller ce script
  */
 
@@ -22,15 +22,6 @@ flux de stock, propositions, utilisateurs.
 quand le dossier <code>selenium-tests/</code>, <code>frontend/</code>
 ou <code>Jenkinsfile.e2e</code> est modifié.
 '''.stripIndent().trim())
-
-  // ── Rétention des builds ────────────────────────────────────────────────
-  logRotator {
-    numToKeep(10)
-    artifactNumToKeep(5)
-  }
-
-  // ── Empêcher les builds concurrents ──────────────────────────────────────
-  concurrentBuild(false)
 
   // ── GitHub project link ──────────────────────────────────────────────────
   properties {
