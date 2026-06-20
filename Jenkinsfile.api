@@ -22,6 +22,11 @@ pipeline {
     }
     parameters {
         booleanParam(
+            name: 'FORCE',
+            defaultValue: false,
+            description: 'Forcer le pipeline même sans nouveau commit (ex: après MAJ credentials)'
+        )
+        booleanParam(
             name: 'WITH_COVERAGE',
             defaultValue: true,
             description: 'Générer le rapport de couverture de code (lcov)'
@@ -43,6 +48,7 @@ pipeline {
             when {
                 allOf {
                     expression { env.BUILD_NUMBER != '1' }
+                    expression { !params.FORCE }
                     not { anyOf { changeset "backend/**"; changeset "Jenkinsfile.api" } }
                 }
             }
