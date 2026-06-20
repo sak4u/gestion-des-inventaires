@@ -173,9 +173,10 @@ pipeline {
                     cd /d "%BACKEND_DIR%"
                     
                     echo [BDD] Demarrage du serveur NestJS en arriere-plan...
-                    :: Copier .env.test vers .env pour que NestJS trouve JWT_SECRET, DATABASE_URL, etc.
-                    copy /y .env.test .env > nul
-                    :: Demarrer le serveur (le child process herite des variables d'env)
+                    :: Definir JWT_SECRET et DATABASE_URL dans l'environnement (NestJS lit process.env directement, pas .env)
+                    set JWT_SECRET=%JWT_SECRET_TEST%
+                    set DATABASE_URL=%DB_URL_TEST%
+                    :: Demarrer le serveur (le child process herite des variables d'env du parent)
                     start "NestJS-Server" cmd /c "npm run start:dev > server.log 2>&1"
                     
                     echo [BDD] Attente que le serveur soit pret sur localhost:3000 (max 90s)...
