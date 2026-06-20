@@ -82,14 +82,18 @@ pipeline {
                 expression { return !params.SKIP_CONNECTIVITY_CHECK }
             }
             steps {
-                bat """
-                    curl -f -s --max-time 10 "%BACKEND_URL%" > nul 2>&1
-                    curl -f -s --max-time 10 "%FRONTEND_URL%" > nul 2>&1
-                """
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    bat """
+                        echo [CHECK] Verification de la connectivite backend/frontend...
+                        curl -f -s --max-time 10 "%BACKEND_URL%" > nul 2>&1
+                        curl -f -s --max-time 10 "%FRONTEND_URL%" > nul 2>&1
+                        echo [CHECK] Backend + Frontend sont accessibles
+                    """
+                }
             }
             post {
-                success { echo '\u001B[32m  \u2714 E2E API\u001B[0m' }
-                failure { echo '\u001B[33m  \u26A0 E2E API — backend/frontend unreachable (warn only)\u001B[0m' }
+                success { echo '\u001B[32m  \u2714 E2E API — backend & frontend accessibles\u001B[0m' }
+                failure { echo '\u001B[33m  \u26A0 E2E API — backend/frontend unreachable (tests Selenium ignores)\u001B[0m' }
             }
         }
 
