@@ -1,5 +1,8 @@
 pipeline {
     agent any
+    tools {
+        nodejs 'NodeJS 20'
+    }
     environment {
         SELENIUM_DIR   = "${env.WORKSPACE}\\selenium-tests"
         REPORTS_DIR    = "${env.WORKSPACE}\\selenium-tests\\reports"
@@ -58,6 +61,8 @@ pipeline {
                 bat """
                     "%PYTHON%" --version > nul 2>&1
                     "%PYTHON%" -m pip --version > nul 2>&1
+                    node --version > nul 2>&1
+                    npm --version > nul 2>&1
                 """
             }
             post {
