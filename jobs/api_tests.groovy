@@ -21,6 +21,15 @@ Tests API backend : unitaires, E2E Supertest, BDD Cucumber, Newman Postman.
 quand le dossier <code>backend/</code> ou <code>Jenkinsfile.api</code> est modifié.
 '''.stripIndent().trim())
 
+  // ── Rétention des builds ────────────────────────────────────────────────
+  logRotator {
+    numToKeep(20)
+    artifactNumToKeep(10)
+  }
+
+  // ── Empêcher les builds concurrents ──────────────────────────────────────
+  concurrentBuild(false)
+
   // ── GitHub project link ──────────────────────────────────────────────────
   properties {
     githubProjectUrl('https://github.com/sak4u/gestion-des-inventaires/')

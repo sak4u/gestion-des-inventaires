@@ -23,6 +23,15 @@ quand le dossier <code>selenium-tests/</code>, <code>frontend/</code>
 ou <code>Jenkinsfile.e2e</code> est modifié.
 '''.stripIndent().trim())
 
+  // ── Rétention des builds ────────────────────────────────────────────────
+  logRotator {
+    numToKeep(10)
+    artifactNumToKeep(5)
+  }
+
+  // ── Empêcher les builds concurrents ──────────────────────────────────────
+  concurrentBuild(false)
+
   // ── GitHub project link ──────────────────────────────────────────────────
   properties {
     githubProjectUrl('https://github.com/sak4u/gestion-des-inventaires/')
