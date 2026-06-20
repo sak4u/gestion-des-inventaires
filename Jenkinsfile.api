@@ -190,6 +190,13 @@ pipeline {
                     npm run test:bdd:ci
                     set BDD_EXIT=%ERRORLEVEL%
                     
+                    :: Executer les tests Newman (serveur encore actif)
+                    if /i "%RUN_NEWMAN%"=="true" (
+                        echo [BDD] Lancement des tests Newman...
+                        npm run test:postman
+                        set BDD_EXIT=%ERRORLEVEL%
+                    )
+                    
                     :: Arreter le serveur proprement (par titre de fenetre)
                     echo [BDD] Arret du serveur...
                     taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
@@ -204,25 +211,6 @@ pipeline {
                         artifacts:         "${env.WORKSPACE}\\backend\\test\\reports\\cucumber-report.json",
                         allowEmptyArchive: true
                     )
-                }
-                success { echo '\u001B[32m  \u2714 BDD Tests\u001B[0m' }
-                failure { echo '\u001B[31m  \u2718 BDD Tests — check Cucumber Artifacts\u001B[0m' }
-            }
-        }
-
-        stage('Newman Tests') {
-            when {
-                expression { return params.RUN_NEWMAN }
-            }
-            steps {
-                bat """
-                    cd /d "%BACKEND_DIR%"
-                    if not exist "test\\reports" mkdir "test\\reports" > nul 2>&1
-                    npm run test:postman
-                """
-            }
-            post {
-                always {
                     publishHTML([
                         allowMissing:          true,
                         alwaysLinkToLastBuild: true,
@@ -233,8 +221,8 @@ pipeline {
                         reportTitles:          'Newman API Report'
                     ])
                 }
-                success { echo '\u001B[32m  \u2714 Newman Tests\u001B[0m' }
-                failure { echo '\u001B[31m  \u2718 Newman Tests — check Newman Report tab\u001B[0m' }
+                success { echo '\u001B[32m  \u2714 BDD + Newman Tests\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 BDD + Newman Tests — check reports\u001B[0m' }
             }
         }
     }
