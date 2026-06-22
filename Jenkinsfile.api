@@ -180,9 +180,9 @@ pipeline {
                     echo [BDD] Injection des donnees de test...
                     npx ts-node prisma/seed-minimal.ts
 
-                    :: Demarrer le serveur (le child process herite des variables d'env du parent)
+                    :: Demarrer le serveur (/B = sans nouvelle fenetre, essentiel pour Jenkins Session 0)
                     echo [BDD] Demarrage du serveur NestJS en arriere-plan...
-                    start "NestJS-Server" cmd /c "npm run start:dev > server.log 2>&1"
+                    start /B cmd /c "cd /d \"%BACKEND_DIR%\" && npm run start:dev > server.log 2>&1"
                     
                     echo [BDD] Attente que le serveur soit pret sur localhost:3000 (max 90s)...
                     :: Boucle PowerShell pure sur UNE SEULE LIGNE (evite le decoupage batch de Jenkins)
@@ -190,7 +190,7 @@ pipeline {
                     if errorlevel 1 (
                         echo [BDD] ERREUR: Serveur non demarre — voir server.log:
                         type server.log
-                        taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
+                        for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /F /PID %%a > nul 2>&1
                         exit /b 1
                     )
                     
@@ -208,9 +208,9 @@ pipeline {
                         if errorlevel 1 set BDD_EXIT=%ERRORLEVEL%
                     )
                     
-                    :: Arreter le serveur proprement (par titre de fenetre)
+                    :: Arreter le serveur (par PID ecoutant sur le port 3000 — robuste meme sans fenetre)
                     echo [BDD] Arret du serveur...
-                    taskkill /F /FI "WINDOWTITLE eq NestJS-Server*" > nul 2>&1
+                    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /F /PID %%a > nul 2>&1
                     echo [BDD] Arret termine
                     
                     exit /b %BDD_EXIT%
