@@ -113,7 +113,7 @@ pipeline {
             post {
                 always {
                     junit(
-                        testResults:          "${env.WORKSPACE}\\backend\\test\\reports\\junit-unit.xml",
+                        testResults:          "backend/test/reports/junit-unit.xml",
                         allowEmptyResults:     true,
                         skipPublishingChecks:  false
                     )
@@ -121,7 +121,7 @@ pipeline {
                         allowMissing:          true,
                         alwaysLinkToLastBuild: true,
                         keepAll:               true,
-                        reportDir:             "${env.WORKSPACE}\\backend\\coverage\\lcov-report",
+                        reportDir:             "backend/coverage/lcov-report",
                         reportFiles:           'index.html',
                         reportName:            'Couverture Code (Jest)',
                         reportTitles:          'Code Coverage'
@@ -155,7 +155,7 @@ pipeline {
             post {
                 always {
                     junit(
-                        testResults:       "${env.WORKSPACE}\\backend\\test\\reports\\junit-e2e-supertest.xml",
+                        testResults:       "backend/test/reports/junit-e2e-supertest.xml",
                         allowEmptyResults: true
                     )
                 }
@@ -219,15 +219,15 @@ pipeline {
             post {
                 always {
                     archiveArtifacts(
-                        artifacts:         "${env.WORKSPACE}\\backend\\test\\reports\\cucumber-report.json",
+                        artifacts:         "backend/test/reports/cucumber-report.json",
                         allowEmptyArchive: true
                     )
                     publishHTML([
                         allowMissing:          true,
                         alwaysLinkToLastBuild: true,
                         keepAll:               true,
-                        reportDir:             "${env.WORKSPACE}\\backend\\test\\reports",
-                        reportFiles:           'newman-report.html',
+                        reportDir:             "backend/test/reports",
+                        reportFiles:           "newman-report.html",
                         reportName:            'Rapport Newman — Tests API',
                         reportTitles:          'Newman API Report'
                     ])
