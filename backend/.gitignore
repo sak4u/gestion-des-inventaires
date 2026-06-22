@@ -43,6 +43,10 @@ lerna-debug.log*
 .env.production.local
 .env.local
 
+# test reports and artifacts
+test/reports/
+coverage/
+
 # temp directory
 .temp
 .tmp

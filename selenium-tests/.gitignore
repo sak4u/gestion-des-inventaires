@@ -1,0 +1,7 @@
+# Test reports and artifacts
+reports/
+__pycache__/
+*.pyc
+*.pyo
+.behave/
+screenshots/

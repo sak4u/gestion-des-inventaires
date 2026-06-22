@@ -1,1 +1,0 @@
-dont forget to do the best practise react  avec clean code et solid principle et utilise tailwind css
