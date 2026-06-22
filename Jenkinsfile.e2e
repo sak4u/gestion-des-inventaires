@@ -110,6 +110,7 @@ pipeline {
         stage('BDD Tests') {
             environment {
                 HEADLESS_MODE = "${params.HEADLESS}"
+                SELENIUM_HEADLESS = 'true'  /* Force le mode headless (config.py lit cette variable) */
             }
             steps {
                 script {
@@ -121,6 +122,14 @@ pipeline {
                 }
 
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    script {
+                        /* Vérifier que Chrome est disponible avant de lancer les tests */
+                        def chromeOk = (bat(script: "where chrome > nul 2>&1", returnStatus: true) == 0) ||
+                                        (bat(script: "where google-chrome > nul 2>&1", returnStatus: true) == 0)
+                        if (!chromeOk) {
+                            echo '\u001B[33m  \u26A0 Chrome non trouvé via "where" — tentative via webdriver-manager...\u001B[0m'
+                        }
+                    }
                     bat """
                         @echo off
                         REM ========== 1. BACKEND NESTJS ==========
@@ -191,11 +200,20 @@ pipeline {
             }
             post {
                 always {
-                    allure([
-                        includeProperties: true,
-                        jdk:               '',
-                        results:           [[path: "selenium-tests/reports/allure-results"]]
-                    ])
+                    script {
+                        /* Verifier que le dossier allure-results contient des fichiers JSON */
+                        def hasJson = (bat(script: "if exist \"${env.WORKSPACE}\\selenium-tests\\reports\\allure-results\\*.json\" (exit 0) else (exit 1)", returnStatus: true) == 0)
+                        def hasProps = (bat(script: "if exist \"${env.WORKSPACE}\\selenium-tests\\reports\\allure-results\\environment.properties\" (exit 0) else (exit 1)", returnStatus: true) == 0)
+                        if (hasJson || hasProps) {
+                            allure([
+                                includeProperties: true,
+                                jdk:               '',
+                                results:           [[path: "selenium-tests/reports/allure-results"]]
+                            ])
+                        } else {
+                            echo '\u001B[33m  \u26A0 Allure : aucun résultat trouvé — les tests Selenium ont probablement echoué avant de générer des rapports\u001B[0m'
+                        }
+                    }
                     junit(
                         testResults:       "selenium-tests/reports/junit-e2e.xml",
                         allowEmptyResults: true

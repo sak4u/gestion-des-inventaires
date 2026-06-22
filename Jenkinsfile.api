@@ -201,7 +201,8 @@ pipeline {
                     
                     :: Executer les tests Newman (serveur encore actif)
                     :: Note: on ne surcharge BDD_EXIT que si Newman echoue (pour ne pas masquer un echec BDD)
-                    if /i "%RUN_NEWMAN%"=="true" (
+                    :: Note: params.RUN_NEWMAN est interpolé par Groovy avant execution du batch
+                    if /i "${params.RUN_NEWMAN}"=="true" (
                         echo [BDD] Lancement des tests Newman...
                         npm run test:postman
                         if errorlevel 1 set BDD_EXIT=%ERRORLEVEL%

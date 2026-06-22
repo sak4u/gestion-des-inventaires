@@ -2,6 +2,8 @@
 #  Configuration globale des tests Selenium
 # ═══════════════════════════════════════════════════════════════
 
+import os
+
 BASE_URL = "http://localhost:5173"
 
 # Credentials définis dans prisma/seed.ts
@@ -30,7 +32,8 @@ WAIT_TIMEOUT = 10
 BROWSER = "chrome"
 
 # Mode headless (True = sans fenêtre, False = avec fenêtre visible)
-HEADLESS = False
+# Priorité : variable d'environnement SELENIUM_HEADLESS > False par défaut
+HEADLESS = os.environ.get('SELENIUM_HEADLESS', 'false').strip().lower() == 'true'
 
 
 
