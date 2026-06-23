@@ -109,8 +109,8 @@ pipeline {
                     ) else (
                         mkdir "%PRISMA_CACHE_DIR%" > nul 2>&1
                         if exist "node_modules\@prisma\engines\schema-engine-windows.exe" (
-                            copy /Y "node_modules\@prisma\engines\schema-engine-windows.exe" "%PRISMA_CACHE_DIR%\\" > nul 2>&1
-                            copy /Y "node_modules\@prisma\engines\query_engine-windows.dll.node" "%PRISMA_CACHE_DIR%\\" > nul 2>&1
+                            copy /Y "node_modules\@prisma\engines\schema-engine-windows.exe" "%PRISMA_CACHE_DIR%\" > nul 2>&1
+                            copy /Y "node_modules\@prisma\engines\query_engine-windows.dll.node" "%PRISMA_CACHE_DIR%\" > nul 2>&1
                             echo [CACHE] Engine Prisma copie depuis node_modules vers le cache offline
                         ) else (
                             echo [CACHE] ERREUR: schema-engine introuvable dans node_modules
