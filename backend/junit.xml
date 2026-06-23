@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="56" failures="0" errors="0" time="17.288">
+  <testsuite name="Produits API (e2e)" errors="0" failures="0" skipped="0" timestamp="2026-06-22T19:07:41" time="5.657" tests="12">
+    <testcase classname="Produits API (e2e) POST /produits doit créer un produit avec les champs obligatoires" name="Produits API (e2e) POST /produits doit créer un produit avec les champs obligatoires" time="0.033">
+    </testcase>
+    <testcase classname="Produits API (e2e) POST /produits doit retourner 401 sans token" name="Produits API (e2e) POST /produits doit retourner 401 sans token" time="0.005">
+    </testcase>
+    <testcase classname="Produits API (e2e) POST /produits doit retourner 400 si codeBare est manquant" name="Produits API (e2e) POST /produits doit retourner 400 si codeBare est manquant" time="0.006">
+    </testcase>
+    <testcase classname="Produits API (e2e) POST /produits doit retourner 400 si nom est manquant" name="Produits API (e2e) POST /produits doit retourner 400 si nom est manquant" time="0.007">
+    </testcase>
+    <testcase classname="Produits API (e2e) POST /produits doit retourner 400 si stockAlert est négatif" name="Produits API (e2e) POST /produits doit retourner 400 si stockAlert est négatif" time="0.008">
+    </testcase>
+    <testcase classname="Produits API (e2e) GET /produits doit retourner la liste de tous les produits" name="Produits API (e2e) GET /produits doit retourner la liste de tous les produits" time="0.019">
+    </testcase>
+    <testcase classname="Produits API (e2e) GET /produits doit retourner 401 sans token" name="Produits API (e2e) GET /produits doit retourner 401 sans token" time="0.006">
+    </testcase>
+    <testcase classname="Produits API (e2e) GET /produits/:id doit retourner le produit par son ID" name="Produits API (e2e) GET /produits/:id doit retourner le produit par son ID" time="0.019">
+    </testcase>
+    <testcase classname="Produits API (e2e) GET /produits/:id doit retourner 404 pour un ID inexistant" name="Produits API (e2e) GET /produits/:id doit retourner 404 pour un ID inexistant" time="0.009">
+    </testcase>
+    <testcase classname="Produits API (e2e) PATCH /produits/:id doit mettre à jour le prix de vente du produit" name="Produits API (e2e) PATCH /produits/:id doit mettre à jour le prix de vente du produit" time="0.016">
+    </testcase>
+    <testcase classname="Produits API (e2e) PATCH /produits/:id doit mettre à jour le seuil d&apos;alerte" name="Produits API (e2e) PATCH /produits/:id doit mettre à jour le seuil d&apos;alerte" time="0.013">
+    </testcase>
+    <testcase classname="Produits API (e2e) DELETE /produits/:id doit supprimer le produit créé" name="Produits API (e2e) DELETE /produits/:id doit supprimer le produit créé" time="0.018">
+    </testcase>
+  </testsuite>
+  <testsuite name="Auth API (e2e)" errors="0" failures="0" skipped="0" timestamp="2026-06-22T19:07:46" time="2.173" tests="13">
+    <testcase classname="Auth API (e2e) POST /auth/login doit retourner un token JWT avec des credentials valides (ADMIN)" name="Auth API (e2e) POST /auth/login doit retourner un token JWT avec des credentials valides (ADMIN)" time="0.084">
+    </testcase>
+    <testcase classname="Auth API (e2e) POST /auth/login doit retourner un token JWT avec des credentials valides (RESPONSABLE_STOCK)" name="Auth API (e2e) POST /auth/login doit retourner un token JWT avec des credentials valides (RESPONSABLE_STOCK)" time="0.085">
+    </testcase>
+    <testcase classname="Auth API (e2e) POST /auth/login doit retourner un token JWT avec des credentials valides (ACHAT)" name="Auth API (e2e) POST /auth/login doit retourner un token JWT avec des credentials valides (ACHAT)" time="0.091">
+    </testcase>
+    <testcase classname="Auth API (e2e) POST /auth/login doit retourner 401 avec un mauvais mot de passe" name="Auth API (e2e) POST /auth/login doit retourner 401 avec un mauvais mot de passe" time="0.081">
+    </testcase>
+    <testcase classname="Auth API (e2e) POST /auth/login doit retourner 401 avec un email inexistant" name="Auth API (e2e) POST /auth/login doit retourner 401 avec un email inexistant" time="0.007">
+    </testcase>
+    <testcase classname="Auth API (e2e) POST /auth/login doit retourner 400 si le body est vide" name="Auth API (e2e) POST /auth/login doit retourner 400 si le body est vide" time="0.005">
+    </testcase>
+    <testcase classname="Auth API (e2e) GET /auth/profile doit retourner le profil avec un token valide" name="Auth API (e2e) GET /auth/profile doit retourner le profil avec un token valide" time="0.008">
+    </testcase>
+    <testcase classname="Auth API (e2e) GET /auth/profile doit retourner 401 sans token" name="Auth API (e2e) GET /auth/profile doit retourner 401 sans token" time="0.004">
+    </testcase>
+    <testcase classname="Auth API (e2e) GET /auth/profile doit retourner 401 avec un token invalide" name="Auth API (e2e) GET /auth/profile doit retourner 401 avec un token invalide" time="0.004">
+    </testcase>
+    <testcase classname="Auth API (e2e) GET /auth/users doit retourner la liste des utilisateurs pour ADMIN" name="Auth API (e2e) GET /auth/users doit retourner la liste des utilisateurs pour ADMIN" time="0.008">
+    </testcase>
+    <testcase classname="Auth API (e2e) GET /auth/users doit retourner 403 pour un rôle non ADMIN" name="Auth API (e2e) GET /auth/users doit retourner 403 pour un rôle non ADMIN" time="0.077">
+    </testcase>
+    <testcase classname="Auth API (e2e) GET /auth/roles doit retourner les 3 rôles disponibles" name="Auth API (e2e) GET /auth/roles doit retourner les 3 rôles disponibles" time="0.006">
+    </testcase>
+    <testcase classname="Auth API (e2e) POST /auth/forgot-password doit retourner un message de confirmation (même si email inexistant)" name="Auth API (e2e) POST /auth/forgot-password doit retourner un message de confirmation (même si email inexistant)" time="0.005">
+    </testcase>
+  </testsuite>
+  <testsuite name="Commandes API (e2e)" errors="0" failures="0" skipped="0" timestamp="2026-06-22T19:07:49" time="1.919" tests="9">
+    <testcase classname="Commandes API (e2e) POST /commandes doit créer une commande d&apos;achat avec fournisseur et entrepôt" name="Commandes API (e2e) POST /commandes doit créer une commande d&apos;achat avec fournisseur et entrepôt" time="0.031">
+    </testcase>
+    <testcase classname="Commandes API (e2e) POST /commandes doit retourner 400 sans fournisseurId pour type=ACHAT" name="Commandes API (e2e) POST /commandes doit retourner 400 sans fournisseurId pour type=ACHAT" time="0.005">
+    </testcase>
+    <testcase classname="Commandes API (e2e) POST /commandes doit retourner 400 sans entrepotId pour type=ACHAT" name="Commandes API (e2e) POST /commandes doit retourner 400 sans entrepotId pour type=ACHAT" time="0.004">
+    </testcase>
+    <testcase classname="Commandes API (e2e) POST /commandes doit retourner 401 sans token" name="Commandes API (e2e) POST /commandes doit retourner 401 sans token" time="0.004">
+    </testcase>
+    <testcase classname="Commandes API (e2e) GET /commandes doit retourner la liste des commandes" name="Commandes API (e2e) GET /commandes doit retourner la liste des commandes" time="0.009">
+    </testcase>
+    <testcase classname="Commandes API (e2e) GET /commandes/:id doit retourner la commande par son ID" name="Commandes API (e2e) GET /commandes/:id doit retourner la commande par son ID" time="0.012">
+    </testcase>
+    <testcase classname="Commandes API (e2e) GET /commandes/:id doit retourner 404 pour un ID inexistant" name="Commandes API (e2e) GET /commandes/:id doit retourner 404 pour un ID inexistant" time="0.007">
+    </testcase>
+    <testcase classname="Commandes API (e2e) PATCH /commandes/:id — Transition EN_COURS → FERMEE doit passer la commande à l&apos;état FERMEE" name="Commandes API (e2e) PATCH /commandes/:id — Transition EN_COURS → FERMEE doit passer la commande à l&apos;état FERMEE" time="0.027">
+    </testcase>
+    <testcase classname="Commandes API (e2e) DELETE /commandes/:id doit supprimer une commande FERMEE" name="Commandes API (e2e) DELETE /commandes/:id doit supprimer une commande FERMEE" time="0.013">
+    </testcase>
+  </testsuite>
+  <testsuite name="Fournisseurs API (e2e)" errors="0" failures="0" skipped="0" timestamp="2026-06-22T19:07:51" time="1.904" tests="9">
+    <testcase classname="Fournisseurs API (e2e) POST /fournisseurs doit créer un fournisseur avec les champs valides" name="Fournisseurs API (e2e) POST /fournisseurs doit créer un fournisseur avec les champs valides" time="0.031">
+    </testcase>
+    <testcase classname="Fournisseurs API (e2e) POST /fournisseurs doit créer un fournisseur sans email (champ optionnel)" name="Fournisseurs API (e2e) POST /fournisseurs doit créer un fournisseur sans email (champ optionnel)" time="0.053">
+    </testcase>
+    <testcase classname="Fournisseurs API (e2e) POST /fournisseurs doit retourner 401 sans token" name="Fournisseurs API (e2e) POST /fournisseurs doit retourner 401 sans token" time="0.005">
+    </testcase>
+    <testcase classname="Fournisseurs API (e2e) POST /fournisseurs doit retourner 400 avec un email invalide" name="Fournisseurs API (e2e) POST /fournisseurs doit retourner 400 avec un email invalide" time="0.006">
+    </testcase>
+    <testcase classname="Fournisseurs API (e2e) GET /fournisseurs doit retourner la liste des fournisseurs" name="Fournisseurs API (e2e) GET /fournisseurs doit retourner la liste des fournisseurs" time="0.012">
+    </testcase>
+    <testcase classname="Fournisseurs API (e2e) GET /fournisseurs/:id doit retourner le fournisseur par son ID" name="Fournisseurs API (e2e) GET /fournisseurs/:id doit retourner le fournisseur par son ID" time="0.008">
+    </testcase>
+    <testcase classname="Fournisseurs API (e2e) GET /fournisseurs/:id doit retourner 404 pour un ID inexistant" name="Fournisseurs API (e2e) GET /fournisseurs/:id doit retourner 404 pour un ID inexistant" time="0.01">
+    </testcase>
+    <testcase classname="Fournisseurs API (e2e) PATCH /fournisseurs/:id doit mettre à jour le numéro de téléphone" name="Fournisseurs API (e2e) PATCH /fournisseurs/:id doit mettre à jour le numéro de téléphone" time="0.013">
+    </testcase>
+    <testcase classname="Fournisseurs API (e2e) DELETE /fournisseurs/:id doit supprimer le fournisseur créé" name="Fournisseurs API (e2e) DELETE /fournisseurs/:id doit supprimer le fournisseur créé" time="0.011">
+    </testcase>
+  </testsuite>
+  <testsuite name="Entrepots API (e2e)" errors="0" failures="0" skipped="0" timestamp="2026-06-22T19:07:53" time="2.036" tests="8">
+    <testcase classname="Entrepots API (e2e) POST /entrepots doit créer un entrepôt (ADMIN)" name="Entrepots API (e2e) POST /entrepots doit créer un entrepôt (ADMIN)" time="0.029">
+    </testcase>
+    <testcase classname="Entrepots API (e2e) POST /entrepots doit créer un entrepôt sans capaciteMax (optionnel)" name="Entrepots API (e2e) POST /entrepots doit créer un entrepôt sans capaciteMax (optionnel)" time="0.053">
+    </testcase>
+    <testcase classname="Entrepots API (e2e) POST /entrepots doit retourner 403 pour le rôle ACHAT (pas autorisé à créer)" name="Entrepots API (e2e) POST /entrepots doit retourner 403 pour le rôle ACHAT (pas autorisé à créer)" time="0.005">
+    </testcase>
+    <testcase classname="Entrepots API (e2e) POST /entrepots doit retourner 400 si le nom est manquant" name="Entrepots API (e2e) POST /entrepots doit retourner 400 si le nom est manquant" time="0.005">
+    </testcase>
+    <testcase classname="Entrepots API (e2e) GET /entrepots doit retourner la liste des entrepôts" name="Entrepots API (e2e) GET /entrepots doit retourner la liste des entrepôts" time="0.013">
+    </testcase>
+    <testcase classname="Entrepots API (e2e) GET /entrepots/:id doit retourner l&apos;entrepôt par son ID" name="Entrepots API (e2e) GET /entrepots/:id doit retourner l&apos;entrepôt par son ID" time="0.007">
+    </testcase>
+    <testcase classname="Entrepots API (e2e) PATCH /entrepots/:id doit mettre à jour la capacité maximale" name="Entrepots API (e2e) PATCH /entrepots/:id doit mettre à jour la capacité maximale" time="0.013">
+    </testcase>
+    <testcase classname="Entrepots API (e2e) DELETE /entrepots/:id doit supprimer l&apos;entrepôt créé" name="Entrepots API (e2e) DELETE /entrepots/:id doit supprimer l&apos;entrepôt créé" time="0.01">
+    </testcase>
+  </testsuite>
+  <testsuite name="Propositions IA API (e2e)" errors="0" failures="0" skipped="0" timestamp="2026-06-22T19:07:55" time="1.818" tests="4">
+    <testcase classname="Propositions IA API (e2e) GET /propositions doit retourner la liste des propositions" name="Propositions IA API (e2e) GET /propositions doit retourner la liste des propositions" time="0.042">
+    </testcase>
+    <testcase classname="Propositions IA API (e2e) GET /propositions doit retourner 401 sans token" name="Propositions IA API (e2e) GET /propositions doit retourner 401 sans token" time="0.006">
+    </testcase>
+    <testcase classname="Propositions IA API (e2e) GET /propositions/pending doit retourner les propositions EN_ATTENTE" name="Propositions IA API (e2e) GET /propositions/pending doit retourner les propositions EN_ATTENTE" time="0.009">
+    </testcase>
+    <testcase classname="Propositions IA API (e2e) POST /propositions/check-all doit déclencher la vérification des stocks bas et retourner un résumé" name="Propositions IA API (e2e) POST /propositions/check-all doit déclencher la vérification des stocks bas et retourner un résumé" time="0.016">
+    </testcase>
+  </testsuite>
+  <testsuite name="AppController (e2e)" errors="0" failures="0" skipped="0" timestamp="2026-06-22T19:07:56" time="1.606" tests="1">
+    <testcase classname="AppController (e2e) / (GET) — doit retourner un message de statut 200" name="AppController (e2e) / (GET) — doit retourner un message de statut 200" time="0.016">
+    </testcase>
+  </testsuite>
+</testsuites>

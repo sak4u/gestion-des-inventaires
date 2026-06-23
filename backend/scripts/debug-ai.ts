@@ -1,5 +1,5 @@
 import { PrismaClient, StatutProposition } from '@prisma/client';
-import { AI_CONFIG } from './src/ai/config/ai.config';
+import { AI_CONFIG } from '../src/ai/config/ai.config';
 
 const prisma = new PrismaClient();
 

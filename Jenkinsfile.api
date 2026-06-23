@@ -73,8 +73,8 @@ pipeline {
             steps {
                 bat """
                     node --version > nul 2>&1
-                    npm --version > nul 2>&1
-                    newman --version > nul 2>&1
+                    call npm --version > nul 2>&1
+                    call newman --version > nul 2>&1
                 """
             }
             post {
@@ -98,7 +98,7 @@ pipeline {
             steps {
                 bat """
                     cd /d "%BACKEND_DIR%"
-                    npm install --prefer-offline 2>&1
+                    call npm install --prefer-offline 2>&1
                     if not exist "test\\reports" mkdir "test\\reports" > nul 2>&1
                     :: Pre-populer le cache Prisma Engine (mode offline : Jenkins n'a pas accès à binaries.prisma.sh)
                     set PRISMA_ENGINE_HASH=a9055b89e58b4b5bfb59600785423b1db3d0e75d
@@ -120,7 +120,7 @@ pipeline {
                         )
                     )
                     :: Générer le client Prisma (nécessaire pour les enums dans les tests)
-                    npx prisma generate
+                    call npx prisma generate
                 """
             }
             post {
@@ -134,10 +134,10 @@ pipeline {
                 bat """
                     cd /d "%BACKEND_DIR%"
                     :: Garantir que Prisma Client est genere avant les tests (les enums TypeCommande, EtatCommande viennent de @prisma/client)
-                    npx prisma generate
+                    call npx prisma generate
                     set JEST_JUNIT_OUTPUT_DIR=test\\reports
                     set JEST_JUNIT_OUTPUT_NAME=junit-unit.xml
-                    npm run test:ci
+                    call npm run test:ci
                 """
             }
             post {
@@ -171,15 +171,15 @@ pipeline {
                     set DATABASE_URL=%DB_URL_TEST%
 
                     :: Appliquer le schema Prisma sur la DB de test
-                    npx prisma db push --force-reset --accept-data-loss
+                    call npx prisma db push --force-reset --accept-data-loss
 
                     :: Injecter les donnees de test (users, produits, fournisseurs, entrepots...)
-                    npx ts-node prisma/seed-minimal.ts
+                    call npx ts-node prisma/seed-minimal.ts
 
                     :: Lancer les tests E2E Supertest
                     set JEST_JUNIT_OUTPUT_DIR=test\\reports
                     set JEST_JUNIT_OUTPUT_NAME=junit-e2e-supertest.xml
-                    npm run test:e2e:ci
+                    call npm run test:e2e:ci
                 """
             }
             post {
@@ -208,11 +208,11 @@ pipeline {
 
                     :: Injecter les donnees de test dans la DB (utilisateurs, produits, etc.)
                     echo [BDD] Injection des donnees de test...
-                    npx ts-node prisma/seed-minimal.ts
+                    call npx ts-node prisma/seed-minimal.ts
 
                     :: Demarrer le serveur (/B = sans nouvelle fenetre, essentiel pour Jenkins Session 0)
                     echo [BDD] Demarrage du serveur NestJS en arriere-plan...
-                    start /B cmd /c "cd /d \"%BACKEND_DIR%\" && npm run start:dev > server.log 2>&1"
+                    start /B cmd /c "cd /d \"%BACKEND_DIR%\" && call npm run start:dev > server.log 2>&1"
                     
                     echo [BDD] Attente que le serveur soit pret sur localhost:3000 (max 90s)...
                     :: Boucle PowerShell pure sur UNE SEULE LIGNE (evite le decoupage batch de Jenkins)
@@ -226,7 +226,7 @@ pipeline {
                     
                     :: Executer les tests BDD Cucumber
                     echo [BDD] Lancement des scenarios Cucumber...
-                    npm run test:bdd:ci
+                    call npm run test:bdd:ci
                     set BDD_EXIT=%ERRORLEVEL%
                     
                     :: Executer les tests Newman (serveur encore actif)
@@ -234,7 +234,7 @@ pipeline {
                     :: Note: params.RUN_NEWMAN est interpolé par Groovy avant execution du batch
                     if /i "${params.RUN_NEWMAN}"=="true" (
                         echo [BDD] Lancement des tests Newman...
-                        npm run test:postman
+                        call npm run test:postman
                         if errorlevel 1 set BDD_EXIT=%ERRORLEVEL%
                     )
                     
