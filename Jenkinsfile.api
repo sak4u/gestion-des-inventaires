@@ -100,34 +100,26 @@ pipeline {
                     cd /d "%BACKEND_DIR%"
                     call npm install --prefer-offline 2>&1
                     if not exist "test\\reports" mkdir "test\\reports" > nul 2>&1
-                    :: Pre-populer le cache Prisma Engine (mode offline : Jenkins n'a pas accès à binaries.prisma.sh)
-                    set PRISMA_ENGINE_HASH=a9055b89e58b4b5bfb59600785423b1db3d0e75d
-                    set PRISMA_CACHE_DIR=%USERPROFILE%\\.cache\\prisma\\master\\%PRISMA_ENGINE_HASH%
-                    :: Vérifier si le cache est déjà popule (persistant entre les builds sur l'agent)
-                    if exist "%PRISMA_CACHE_DIR%\\schema-engine-windows.exe" (
-                        echo [CACHE] Engine Prisma deja en cache
-                        :: Restaurer les engines du cache vers node_modules (après git clean -fdx)
-                        if not exist "node_modules\\@prisma\\engines\\schema-engine-windows.exe" (
-                            mkdir "node_modules\\@prisma\\engines" > nul 2>&1
-                            copy /Y "%PRISMA_CACHE_DIR%\\schema-engine-windows.exe" "node_modules\\@prisma\\engines\\" > nul 2>&1
-                            copy /Y "%PRISMA_CACHE_DIR%\\query_engine-windows.dll.node" "node_modules\\@prisma\\engines\\" > nul 2>&1
-                            echo [CACHE] Engines Prisma restaures depuis le cache offline
-                        )
+                    :: Backup / restore des engines Prisma (persistant entre les builds, pas de hash hardcodé)
+                    if exist "node_modules\\@prisma\\engines\\schema-engine-windows.exe" (
+                        if not exist "%USERPROFILE%\\.cache\\prisma\\engines-backup" mkdir "%USERPROFILE%\\.cache\\prisma\\engines-backup" > nul 2>&1
+                        copy /Y "node_modules\\@prisma\\engines\\schema-engine-windows.exe" "%USERPROFILE%\\.cache\\prisma\\engines-backup\\" > nul 2>&1
+                        copy /Y "node_modules\\@prisma\\engines\\query_engine-windows.dll.node" "%USERPROFILE%\\.cache\\prisma\\engines-backup\\" > nul 2>&1
+                        echo [CACHE] Prisma engines sauvegardes
                     ) else (
-                        mkdir "%PRISMA_CACHE_DIR%" > nul 2>&1
-                        if exist "node_modules\\@prisma\\engines\\schema-engine-windows.exe" (
-                            copy /Y "node_modules\\@prisma\\engines\\schema-engine-windows.exe" "%PRISMA_CACHE_DIR%\\" > nul 2>&1
-                            copy /Y "node_modules\\@prisma\\engines\\query_engine-windows.dll.node" "%PRISMA_CACHE_DIR%\\" > nul 2>&1
-                            echo [CACHE] Engine Prisma copie depuis node_modules vers le cache offline
+                        if exist "%USERPROFILE%\\.cache\\prisma\\engines-backup\\schema-engine-windows.exe" (
+                            if not exist "node_modules\\@prisma\\engines" mkdir "node_modules\\@prisma\\engines" > nul 2>&1
+                            copy /Y "%USERPROFILE%\\.cache\\prisma\\engines-backup\\schema-engine-windows.exe" "node_modules\\@prisma\\engines\\" > nul 2>&1
+                            copy /Y "%USERPROFILE%\\.cache\\prisma\\engines-backup\\query_engine-windows.dll.node" "node_modules\\@prisma\\engines\\" > nul 2>&1
+                            echo [CACHE] Prisma engines restaures depuis le backup
                         ) else (
-                            echo [CACHE] ERREUR: engines Prisma introuvables dans node_modules
-                            echo [CACHE] Solution: Executer 'npm install' sans --prefer-offline pour telecharger les binaires
-                            rem Ne pas bloquer le pipeline — prisma generate echouera avec un message clair
+                            echo [CACHE] ATTENTION: engines Prisma introuvables (npm install sans --prefer-offline requis une fois)
                         )
                     )
-                    :: Générer le client Prisma (nécessaire pour les enums dans les tests)
-                    :: PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 evite la verification checksum online (Jenkins offline)
+                    :: Pointer Prisma vers les engines locaux + ignorer checksum (Jenkins offline)
                     set PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+                    set PRISMA_QUERY_ENGINE_LIBRARY=node_modules\@prisma\engines\query_engine-windows.dll.node
+                    set PRISMA_SCHEMA_ENGINE_BINARY=node_modules\@prisma\engines\schema-engine-windows.exe
                     call npx prisma generate
                 """
             }
@@ -143,6 +135,8 @@ pipeline {
                     cd /d "%BACKEND_DIR%"
                     :: Garantir que Prisma Client est genere avant les tests (les enums TypeCommande, EtatCommande viennent de @prisma/client)
                     set PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+                    set PRISMA_QUERY_ENGINE_LIBRARY=node_modules\@prisma\engines\query_engine-windows.dll.node
+                    set PRISMA_SCHEMA_ENGINE_BINARY=node_modules\@prisma\engines\schema-engine-windows.exe
                     call npx prisma generate
                     set JEST_JUNIT_OUTPUT_DIR=test\\reports
                     set JEST_JUNIT_OUTPUT_NAME=junit-unit.xml
@@ -181,6 +175,8 @@ pipeline {
 
                     :: Appliquer le schema Prisma sur la DB de test
                     set PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+                    set PRISMA_QUERY_ENGINE_LIBRARY=node_modules\@prisma\engines\query_engine-windows.dll.node
+                    set PRISMA_SCHEMA_ENGINE_BINARY=node_modules\@prisma\engines\schema-engine-windows.exe
                     call npx prisma db push --force-reset --accept-data-loss
 
                     :: Injecter les donnees de test (users, produits, fournisseurs, entrepots...)
