@@ -49,7 +49,18 @@ pipeline {
                 allOf {
                     expression { env.BUILD_NUMBER != '1' }
                     expression { !params.FORCE }
-                    not { anyOf { changeset "backend/**"; changeset "Jenkinsfile.api" } }
+                    expression {
+                        // git diff-tree (robuste : changeset Jenkins échoue si changelog vide après git clean -fdx)
+                        def rc = bat(
+                            script: "git diff-tree --no-commit-id -r --name-only HEAD 2>nul | findstr /b /l /c:\"backend/\" /c:\"Jenkinsfile.api\"",
+                            returnStatus: true
+                        )
+                        // rc 0 = changements trouvés → ne pas ignorer (return false)
+                        // rc 1 = aucun changement → ignorer (return true)
+                        // rc >= 2 = erreur inattendue → ne pas ignorer (return false)
+                        if (rc >= 2) return false
+                        return rc == 1
+                    }
                 }
             }
             steps {

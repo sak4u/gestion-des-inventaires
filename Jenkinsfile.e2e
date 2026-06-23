@@ -47,7 +47,18 @@ pipeline {
             when {
                 allOf {
                     expression { env.BUILD_NUMBER != '1' }
-                    not { anyOf { changeset "selenium-tests/**"; changeset "frontend/**"; changeset "Jenkinsfile.e2e" } }
+                    expression {
+                        // git diff-tree (robuste : changeset Jenkins échoue si changelog vide après git clean -fdx)
+                        def rc = bat(
+                            script: "git diff-tree --no-commit-id -r --name-only HEAD 2>nul | findstr /b /l /c:\"selenium-tests/\" /c:\"frontend/\" /c:\"Jenkinsfile.e2e\"",
+                            returnStatus: true
+                        )
+                        // rc 0 = changements trouvés → ne pas ignorer (return false)
+                        // rc 1 = aucun changement → ignorer (return true)
+                        // rc >= 2 = erreur inattendue → ne pas ignorer (return false)
+                        if (rc >= 2) return false
+                        return rc == 1
+                    }
                 }
             }
             steps {
@@ -162,7 +173,7 @@ pipeline {
                         powershell -Command "\$t=120;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',3000);\$c.Close();Write-Host '[E2E] Backend OK';exit 0}catch{Start-Sleep -Seconds 5;\$e+=5}}exit 1"
                         if errorlevel 1 (
                             echo [E2E] ERREUR: Backend non demarre
-                            for /f "tokens=5" %a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /F /PID %a > nul 2>&1
+                            for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /F /PID %%a > nul 2>&1
                             exit /b 1
                         )
 
@@ -170,7 +181,7 @@ pipeline {
                         powershell -Command "\$t=120;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',5173);\$c.Close();Write-Host '[E2E] Frontend OK';exit 0}catch{Start-Sleep -Seconds 5;\$e+=5}}exit 1"
                         if errorlevel 1 (
                             echo [E2E] ERREUR: Frontend non demarre
-                            for /f "tokens=5" %a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /F /PID %a > nul 2>&1
+                            for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /F /PID %%a > nul 2>&1
                             for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5173" ^| findstr "LISTENING"') do taskkill /F /PID %%a > nul 2>&1
                             exit /b 1
                         )
