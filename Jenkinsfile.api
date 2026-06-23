@@ -116,7 +116,7 @@ pipeline {
                             echo [CACHE] ERREUR: schema-engine introuvable dans node_modules
                             echo [CACHE] Solution 1: Executer 'npm install' sans --prefer-offline sur l'agent Jenkins
                             echo [CACHE] Solution 2: Telecharger manuellement le binaire (voir documentation)
-                            :: Ne pas bloquer le pipeline — prisma generate echouera avec un message clair
+                            rem Ne pas bloquer le pipeline — prisma generate echouera avec un message clair
                         )
                     )
                     :: Générer le client Prisma (nécessaire pour les enums dans les tests)
