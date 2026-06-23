@@ -147,6 +147,22 @@ pipeline {
                         cd /d "%BACKEND_DIR%"
                         echo [E2E] Installation des dependances backend...
                         call npm install --prefer-offline
+                        :: Pre-populer le cache Prisma Engine (offline : agent Jenkins sans acces a binaries.prisma.sh)
+                        set PRISMA_ENGINE_HASH=a9055b89e58b4b5bfb59600785423b1db3d0e75d
+                        set PRISMA_CACHE_DIR=%USERPROFILE%\\.cache\\prisma\\master\\%PRISMA_ENGINE_HASH%
+                        if exist "%PRISMA_CACHE_DIR%\\schema-engine-windows.exe" (
+                            echo [CACHE] Engine Prisma deja en cache
+                        ) else (
+                            mkdir "%PRISMA_CACHE_DIR%" > nul 2>&1
+                            if exist "node_modules\@prisma\engines\schema-engine-windows.exe" (
+                                copy /Y "node_modules\@prisma\engines\schema-engine-windows.exe" "%PRISMA_CACHE_DIR%\\" > nul 2>&1
+                                copy /Y "node_modules\@prisma\engines\query_engine-windows.dll.node" "%PRISMA_CACHE_DIR%\\" > nul 2>&1
+                                echo [CACHE] Engine Prisma copie dans le cache offline
+                            ) else (
+                                echo [CACHE] ERREUR: schema-engine introuvable dans node_modules
+                                echo [CACHE] Solution: npm install complet ou telechargement manuel requis
+                            )
+                        )
                         echo [E2E] Generation Prisma Client...
                         call npx prisma generate
 

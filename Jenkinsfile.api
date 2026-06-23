@@ -100,6 +100,25 @@ pipeline {
                     cd /d "%BACKEND_DIR%"
                     npm install --prefer-offline 2>&1
                     if not exist "test\\reports" mkdir "test\\reports" > nul 2>&1
+                    :: Pre-populer le cache Prisma Engine (mode offline : Jenkins n'a pas accès à binaries.prisma.sh)
+                    set PRISMA_ENGINE_HASH=a9055b89e58b4b5bfb59600785423b1db3d0e75d
+                    set PRISMA_CACHE_DIR=%USERPROFILE%\\.cache\\prisma\\master\\%PRISMA_ENGINE_HASH%
+                    :: Vérifier si le cache est déjà popule (persistant entre les builds sur l'agent)
+                    if exist "%PRISMA_CACHE_DIR%\\schema-engine-windows.exe" (
+                        echo [CACHE] Engine Prisma deja en cache
+                    ) else (
+                        mkdir "%PRISMA_CACHE_DIR%" > nul 2>&1
+                        if exist "node_modules\@prisma\engines\schema-engine-windows.exe" (
+                            copy /Y "node_modules\@prisma\engines\schema-engine-windows.exe" "%PRISMA_CACHE_DIR%\\" > nul 2>&1
+                            copy /Y "node_modules\@prisma\engines\query_engine-windows.dll.node" "%PRISMA_CACHE_DIR%\\" > nul 2>&1
+                            echo [CACHE] Engine Prisma copie depuis node_modules vers le cache offline
+                        ) else (
+                            echo [CACHE] ERREUR: schema-engine introuvable dans node_modules
+                            echo [CACHE] Solution 1: Executer 'npm install' sans --prefer-offline sur l'agent Jenkins
+                            echo [CACHE] Solution 2: Telecharger manuellement le binaire (voir documentation)
+                            :: Ne pas bloquer le pipeline — prisma generate echouera avec un message clair
+                        )
+                    )
                     :: Générer le client Prisma (nécessaire pour les enums dans les tests)
                     npx prisma generate
                 """
