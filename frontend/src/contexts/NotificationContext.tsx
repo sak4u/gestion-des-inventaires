@@ -6,7 +6,7 @@ type ReactNode = React.ReactNode;
 
 // Always connect directly to the NestJS backend to avoid Vite HMR proxy conflicts
 const SOCKET_URL = import.meta.env.DEV
-  ? 'http://localhost:3000'
+  ? 'https://gestion-des-inventaires-backend.vercel.app/'
   : window.location.origin;
 
 // ── Types ─────────────────────────────────────────────────────────────────────

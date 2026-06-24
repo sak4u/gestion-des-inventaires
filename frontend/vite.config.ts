@@ -14,13 +14,13 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'https://gestion-des-inventaires-backend.vercel.app/',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
         secure: false,
       },
       '/socket.io': {
-        target: 'http://localhost:3000',
+        target: 'https://gestion-des-inventaires-backend.vercel.app/',
         ws: true,
         changeOrigin: true,
       }

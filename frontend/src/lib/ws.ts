@@ -11,9 +11,9 @@ export function getWebSocketBaseUrl(): string {
     return apiUrl.replace(/\/api\/?$/, '').replace(/\/$/, '');
   }
 
-  // In development, connect directly to the NestJS backend (port 3000)
+  // In development, connect directly to the NestJS backend (or production if configured)
   if (import.meta.env.DEV) {
-    return 'http://localhost:3000';
+    return 'https://gestion-des-inventaires-backend.vercel.app/';
   }
 
   return window.location.origin;
