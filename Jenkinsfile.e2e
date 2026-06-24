@@ -26,6 +26,11 @@ pipeline {
     }
     parameters {
         booleanParam(
+            name: 'FORCE',
+            defaultValue: false,
+            description: 'Forcer le pipeline même sans nouveau commit dans selenium-tests/, frontend/ ou Jenkinsfile.e2e'
+        )
+        booleanParam(
             name: 'HEADLESS',
             defaultValue: true,
             description: 'Exécuter Chrome en mode headless (true = sans fenêtre)'
@@ -47,6 +52,7 @@ pipeline {
             when {
                 allOf {
                     expression { env.BUILD_NUMBER != '1' }
+                    expression { !params.FORCE }
                     expression {
                         // git diff-tree (robuste : changeset Jenkins échoue si changelog vide après git clean -fdx)
                         def rc = bat(
