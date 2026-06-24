@@ -265,7 +265,8 @@ pipeline {
                         reportDir:             "backend/test/reports",
                         reportFiles:           "newman-report.html",
                         reportName:            'Rapport Newman — Tests API',
-                        reportTitles:          'Newman API Report'
+                        reportTitles:          'Newman API Report',
+                        sandbox:               false
                     ])
                 }
                 success { echo '\u001B[32m  \u2714 BDD + Newman Tests\u001B[0m' }
