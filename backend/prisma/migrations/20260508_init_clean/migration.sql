@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "TypeStock" AS ENUM ('achat', 'vente', 'perte', 'retour', 'correction_inventaire', 'transfert');
 
 -- CreateEnum

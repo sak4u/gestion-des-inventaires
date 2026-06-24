@@ -17,7 +17,15 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://192.168.1.19:5173', 'https://192.168.1.16:5173', 'https://localhost:5173',' http://192.168.187.145:5173/','https://gestion-des-inventaires-i8mw.vercel.app/','https://gestion-des-inventaires-i8mw.vercel.app','https://gestion-des-inventaires-i8mw.vercel.app/','http://gestion-des-inventaires-i8mw.vercel.app'],
+    origin: [
+      'http://localhost:5173',
+      'http://192.168.1.19:5173',
+      'https://192.168.1.16:5173',
+      'https://localhost:5173',
+      'https://gestion-des-inventaires-backend.vercel.app',
+      'http://gestion-des-inventaires-backend.vercel.app',
+      'https://gestion-des-inventaires-i8mw.vercel.app'
+    ],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
