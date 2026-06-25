@@ -17,6 +17,7 @@ import { PropositionCommandeModule } from './proposition-commande/proposition-co
 import { StockSchedulerModule } from './stock-scheduler/stock-scheduler.module';
 import { StockEntrepotModule } from './stock-entrepot/stock-entrepot.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     StockSchedulerModule,
     StockEntrepotModule,
     NotificationsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -2,6 +2,7 @@ import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDiscon
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { NotificationsService } from './notifications.service';
 
 @WebSocketGateway({
   cors: {
@@ -15,7 +16,10 @@ export class NotificationsGateway
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(NotificationsGateway.name);
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async handleConnection(client: Socket) {
     try {
@@ -63,6 +67,17 @@ export class NotificationsGateway
     roles.forEach(role => {
       this.server.to(`room_${role}`).emit('notification', dataWithTimestamp);
     });
+
+    // Persist for HTTP polling (serverless fallback)
+    for (const role of roles) {
+      void this.notificationsService.create({
+        type: payload.type,
+        title: payload.title,
+        message: payload.message,
+        role,
+        data: payload.data,
+      }).catch(err => this.logger.error(`Failed to persist notification: ${err.message}`));
+    }
   }
 
   /** Alerte stock bas — Destiné uniquement aux ADMIN et ACHAT */

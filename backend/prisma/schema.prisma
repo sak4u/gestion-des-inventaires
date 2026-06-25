@@ -291,3 +291,20 @@ model StockEntrepot {
   @@index([produitId])
   @@index([entrepotId])
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  NOTIFICATIONS (persisted for HTTP polling on serverless platforms)
+// ══════════════════════════════════════════════════════════════════════
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String
+  title     String
+  message   String
+  data      Json?
+  role      String   // target role (ADMIN, ACHAT, etc.)
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([role, createdAt(sort: Desc)])
+}

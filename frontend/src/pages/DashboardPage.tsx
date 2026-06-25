@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { produitsApi, fluxDeStockApi, commandesApi, propositionsApi, entrepotsApi, fournisseursApi, usersApi } from '../api/index';
+import { dashboardApi, fluxDeStockApi, commandesApi, propositionsApi, entrepotsApi, fournisseursApi, usersApi } from '../api/index';
 import type { Kpis, FluxPoint, EntrepotStock, Flux, Proposition, Fournisseur, User, Commande } from '../types/dashboard';
 
 // ── Role-specific dashboards ──────────────────────────────────────────────────
@@ -37,47 +37,31 @@ export default function DashboardPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [prodRes, fluxRes, cmdRes, propRes, entRes, statsRes, fourRes, usersRes] = await Promise.allSettled([
-          produitsApi.list(),
+        const [kpiRes, fluxRes, cmdRes, propRes, entRes, fourRes, usersRes] = await Promise.allSettled([
+          dashboardApi.kpis(),
           fluxDeStockApi.list({ limit: '50' }),
           commandesApi.list({ etat: 'EN_COURS' }),
           propositionsApi.list({ statut: 'EN_ATTENTE', limit: '5' }),
           entrepotsApi.list(),
-          commandesApi.stats(),
           fournisseursApi.list(),
           usersApi.list(),
         ]);
 
-        const produits = prodRes.status === 'fulfilled' ? (prodRes.value as { data: any[] }).data : [];
+        const kpis = kpiRes.status === 'fulfilled' ? (kpiRes.value as { data: any }).data : null;
         const flux = fluxRes.status === 'fulfilled' ? (fluxRes.value as { data: any[] }).data : [];
         const cmds = cmdRes.status === 'fulfilled' ? (cmdRes.value as { data: any[] }).data : [];
         const props = propRes.status === 'fulfilled' ? (propRes.value as { data: any[] }).data : [];
         const entrepots = entRes.status === 'fulfilled' ? (entRes.value as { data: any[] }).data : [];
-        const stats = statsRes.status === 'fulfilled' ? (statsRes.value as { data: any }).data : { revenue: 0, profit: 0 };
         const fours = fourRes.status === 'fulfilled' ? (fourRes.value as { data: any[] }).data : [];
         const usersList = usersRes.status === 'fulfilled' ? (usersRes.value as { data: any[] }).data : [];
         setFournisseurs(fours);
         setUsers(usersList);
 
-        const produitsEnAlerte = produits.filter((p: any) => {
-          const stockTotal = p.stockEntrepots?.reduce((s: number, se: any) => s + se.quantite, 0) ?? 0;
-          return stockTotal <= p.stockAlert;
-        }).length;
-
-        const valeurStock = produits.reduce((acc: number, p: any) => {
-          const stockTotal = p.stockEntrepots?.reduce((s: number, se: any) => s + se.quantite, 0) ?? 0;
-          const prixAchat = p.prixAchatMoyen ?? 0;
-          return acc + (prixAchat * stockTotal);
-        }, 0);
-
-        setKpis({
-          totalProduits: produits.length,
-          produitsEnAlerte,
-          commandesEnCours: cmds.length,
-          valeurStock,
-          revenue: stats.revenue,
-          profit: stats.profit,
-        });
+        if (kpis) {
+          setKpis(kpis);
+        } else {
+          setKpis({ totalProduits: 0, produitsEnAlerte: 0, commandesEnCours: 0, valeurStock: 0 });
+        }
         setRecentFlux(flux.slice(0, 8));
         setPropositions(props);
         setCommandes(cmds);

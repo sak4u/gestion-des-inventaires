@@ -186,3 +186,11 @@ export const usersApi = {
   delete: (id: string) => apiClient.delete(`/auth/users/${id}`),
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  NOTIFICATIONS (HTTP polling)
+// ═══════════════════════════════════════════════════════════════════════════════
+export const notificationsApi = {
+  list: (limit?: number) =>
+    apiClient.get('/notifications', { params: { ...(limit ? { limit: String(limit) } : {}) } }),
+};
+
