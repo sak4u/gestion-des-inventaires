@@ -5,9 +5,10 @@ const { createContext, useContext, useEffect, useState, useCallback } = React;
 type ReactNode = React.ReactNode;
 
 // Always connect directly to the NestJS backend to avoid Vite HMR proxy conflicts
-const SOCKET_URL = import.meta.env.DEV
-  ? 'https://gestion-des-inventaires-backend.vercel.app/'
-  : window.location.origin;
+// Use VITE_WS_URL from .env if available, otherwise fallback to local/origin
+const SOCKET_URL = import.meta.env.VITE_WS_URL ?? (import.meta.env.DEV
+  ? 'http://localhost:3000'
+  : window.location.origin);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type NotifType = 'stock_alert' | 'proposition' | 'commande' | 'info';
@@ -63,8 +64,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     console.log('[WS] Connecting to:', `${SOCKET_URL}/notifications`);
     const socket = io(`${SOCKET_URL}/notifications`, {
-      path: '/socket.io',
-      transports: ['polling', 'websocket'],
+      path: '/socket.io/',
+      transports: ['websocket'],
       auth: { token },
       reconnectionDelay: 3000,
       reconnectionDelayMax: 10000,
