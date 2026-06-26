@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Receipt, Camera, Eye, Check, X, Plus } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import PageHeader from '../components/layout/PageHeader';
 import { EmptyState, Spinner, SearchInput, Badge, BarcodeScanner } from '../components/ui/index';
 import { commandesApi } from '../api/index';
@@ -30,6 +31,8 @@ const ETAT_BADGE: Record<string, { label: string; variant: 'blue' | 'green' | 'o
 
 export default function CommandesPage() {
   const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  const canCreate = hasRole('ADMIN', 'ACHAT');
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [loading, setLoading]       = useState(true);
   const location = useLocation();
@@ -115,9 +118,11 @@ export default function CommandesPage() {
     <div>
       <PageHeader icon={<Receipt size={28} />} title="Commandes" subtitle={`${commandes.length} commande(s) trouvée(s)`}
         actions={
-          <button className="btn-icon" onClick={() => navigate('/commandes/nouvelle')} id="btn-nouvelle-commande" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Plus size={18} /> Nouvelle commande
-          </button>
+          canCreate && (
+            <button className="btn-icon" onClick={() => navigate('/commandes/nouvelle')} id="btn-nouvelle-commande" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Plus size={18} /> Nouvelle commande
+            </button>
+          )
         }
       />
 

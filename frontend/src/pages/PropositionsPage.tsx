@@ -4,6 +4,7 @@ import { EmptyState, Spinner, Badge, SearchInput } from '../components/ui/index'
 import Modal from '../components/ui/Modal';
 import { propositionsApi, entrepotsApi, produitsApi, fournisseursApi } from '../api/index';
 import { Bot, Check, X, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const STATUT_BADGE: Record<string, { label: string; v: 'orange' | 'green' | 'red' }> = {
   EN_ATTENTE: { label: 'En attente', v: 'orange' },
@@ -12,6 +13,8 @@ const STATUT_BADGE: Record<string, { label: string; v: 'orange' | 'green' | 'red
 };
 
 export default function PropositionsPage() {
+  const { hasRole } = useAuth();
+  const canAccept = hasRole('ADMIN', 'ACHAT');
   const [props, setProps]           = useState<any[]>([]);
   const [loading, setLoading]       = useState(true);
   const [statutFilter, setStatut]   = useState('');
@@ -199,7 +202,7 @@ export default function PropositionsPage() {
                     </td>
                     <td><Badge variant={s.v as any}>{s.label}</Badge></td>
                     <td>
-                      {p.statut === 'EN_ATTENTE' && (
+                      {p.statut === 'EN_ATTENTE' && canAccept && (
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn-primary-sm" style={{ padding: '5px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => openAccept(p)}><Check size={14} /> Accepter</button>
                           <button className="btn-danger" style={{ padding: '5px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => handleRefuse(p.id)}><X size={14} /> Refuser</button>
