@@ -166,7 +166,6 @@ export default function PropositionsPage() {
         </button>
       </div>
 
-      {console.log('Rendering PropositionsPage, props count:', props.length)}
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
       ) : (props.length === 0) ? (
