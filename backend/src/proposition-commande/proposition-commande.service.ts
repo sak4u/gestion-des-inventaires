@@ -251,7 +251,7 @@ export class PropositionCommandeService {
     }
 
     // @ts-ignore
-    return this.prisma.propositionCommande.findMany({
+    const results = await this.prisma.propositionCommande.findMany({
       where,
       include: {
         produit: true,
@@ -262,6 +262,8 @@ export class PropositionCommandeService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    console.log(`[findAll] Found ${results.length} propositions with filters:`, JSON.stringify(filters));
+    return results;
   }
 
   async findPending() {

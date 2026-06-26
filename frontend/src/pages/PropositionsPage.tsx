@@ -39,7 +39,10 @@ export default function PropositionsPage() {
       if (fId) params.fournisseurId = fId;
       if (cEtat) params.commandeEtat = cEtat;
       const res = await propositionsApi.list(params);
+      console.log('Propositions response:', res.data);
       setProps(res.data ?? []);
+    } catch (err) {
+      console.error('Failed to load propositions:', err);
     } finally { setLoading(false); }
   }, [statutFilter, search, pId, fId, cEtat]);
 
@@ -163,9 +166,10 @@ export default function PropositionsPage() {
         </button>
       </div>
 
+      {console.log('Rendering PropositionsPage, props count:', props.length)}
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size={36} /></div>
-      ) : props.length === 0 ? (
+      ) : (props.length === 0) ? (
         <EmptyState icon={<Bot size={48} />} title="Aucune proposition" subtitle="L'IA génère des propositions lors des analyses de stock." />
       ) : (
         <div className="table-wrapper">

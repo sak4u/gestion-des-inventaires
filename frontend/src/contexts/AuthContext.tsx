@@ -64,7 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
     window.dispatchEvent(new Event('auth_update'));
-    window.location.href = '/login';
   };
 
   const hasRole = (...roles: string[]) =>

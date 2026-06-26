@@ -65,7 +65,9 @@ export class NotificationsGateway
     };
 
     roles.forEach(role => {
-      this.server.to(`room_${role}`).emit('notification', dataWithTimestamp);
+      if (this.server) {
+        this.server.to(`room_${role}`).emit('notification', dataWithTimestamp);
+      }
     });
 
     // Persist for HTTP polling (serverless fallback)
