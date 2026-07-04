@@ -303,6 +303,7 @@ model Notification {
   message   String
   data      Json?
   role      String   // target role (ADMIN, ACHAT, etc.)
+  read      Boolean  @default(false)
   timestamp DateTime @default(now())
   createdAt DateTime @default(now())
 

@@ -49,8 +49,14 @@ export class NotificationsService {
 
   async markAllRead(role: string) {
     return this.prisma.notification.updateMany({
+      where: { role, read: false },
+      data: { read: true },
+    });
+  }
+
+  async deleteByRole(role: string) {
+    return this.prisma.notification.deleteMany({
       where: { role },
-      data: {},
     });
   }
 }

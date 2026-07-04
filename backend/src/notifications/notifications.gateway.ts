@@ -82,6 +82,20 @@ export class NotificationsGateway
     }
   }
 
+  /** Broadcast that all notifications were marked as read for a role */
+  broadcastAllRead(role: string) {
+    if (this.server) {
+      this.server.to(`room_${role}`).emit('all_read');
+    }
+  }
+
+  /** Broadcast that notifications were cleared for a role */
+  broadcastCleared(role: string) {
+    if (this.server) {
+      this.server.to(`room_${role}`).emit('notifications_cleared');
+    }
+  }
+
   /** Alerte stock bas — Destiné uniquement aux ADMIN et ACHAT */
   alertStockBas(produitNom: string, quantite: number, seuilAlerte: number) {
     this.sendToRoles(['ADMIN', 'ACHAT'], {

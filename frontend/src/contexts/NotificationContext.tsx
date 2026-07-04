@@ -2,7 +2,7 @@ import * as React from 'react';
 import { io } from 'socket.io-client';
 import { apiClient } from '../api/index';
 
-const { createContext, useContext, useEffect, useState, useCallback, useRef } = React;
+const { createContext, useContext, useEffect, useState, useCallback } = React;
 type ReactNode = React.ReactNode;
 
 const SOCKET_URL = import.meta.env.VITE_WS_URL ?? (import.meta.env.DEV
@@ -36,7 +36,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('access_token'));
-  const readIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const handleStorage = () => {
@@ -73,7 +72,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           title: n.title,
           message: n.message,
           timestamp: n.timestamp ?? n.createdAt,
-          read: readIdsRef.current.has(n.id),
+          read: n.read ?? false,
           data: n.data ?? undefined,
         }));
         setNotifications(mapped);
@@ -83,10 +82,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // initial fetch
     void poll();
 
-    const interval = setInterval(poll, 10000);
+    const interval = setInterval(poll, 30000);
 
     return () => {
       active = false;
@@ -95,7 +93,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
   }, [token]);
 
-  // Optional socket.io enhancement for real-time updates (works in local dev)
+  // Socket.io for real-time updates
   useEffect(() => {
     if (!token) return;
 
@@ -108,7 +106,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     });
 
     socket.on('notification', (payload: Omit<Notification, 'id' | 'read'>) => {
-      // Add live notification on top; polling will fill in the rest
       setNotifications((prev) => {
         const exists = prev.some(
           (n) => n.title === payload.title && n.message === payload.message && n.timestamp === payload.timestamp,
@@ -123,27 +120,44 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       });
     });
 
+    socket.on('notifications_cleared', () => {
+      setNotifications([]);
+    });
+
+    socket.on('all_read', () => {
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    });
+
     return () => {
       socket.off('notification');
+      socket.off('notifications_cleared');
+      socket.off('all_read');
       socket.disconnect();
     };
   }, [token]);
 
-  const markRead = useCallback((id: string) => {
-    readIdsRef.current.add(id);
+  const markRead = useCallback(async (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
     );
   }, []);
 
-  const markAllRead = useCallback(() => {
-    setNotifications((prev) => {
-      for (const n of prev) readIdsRef.current.add(n.id);
-      return prev.map((n) => ({ ...n, read: true }));
-    });
+  const markAllRead = useCallback(async () => {
+    try {
+      await apiClient.patch('/notifications/read-all');
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch {
+      // fallback: optimistically mark all as read even if API fails
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    }
   }, []);
 
-  const clearAll = useCallback(() => {
+  const clearAll = useCallback(async () => {
+    try {
+      await apiClient.delete('/notifications');
+    } catch {
+      // proceed with local clear even if API call fails
+    }
     setNotifications([]);
   }, []);
 
