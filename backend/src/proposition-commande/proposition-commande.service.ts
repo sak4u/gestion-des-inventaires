@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PredictionService } from '../ai/prediction/prediction.service';
+import { MailService } from '../mail/mail.service';
 import { EtatCommande, StatutProposition, Prisma } from '@prisma/client';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 
@@ -27,6 +28,7 @@ export class PropositionCommandeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly predictionService: PredictionService,
+    private readonly mailService: MailService,
     private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
@@ -355,6 +357,7 @@ export class PropositionCommandeService {
             quantite: proposition.quantiteProposee,
             prixUnitaire: prixAchat,
           },
+          include: { produit: true },
         });
 
         // 4) Créer un flux d'achat dans l'entrepôt cible (matérialise la réception)
@@ -392,6 +395,34 @@ export class PropositionCommandeService {
       `✅ Proposition ${id} accepted → Commande ${result.commande.id} ` +
         `(${result.commandeLigne.quantite} units → entrepôt "${result.entrepot.nom}")`,
     );
+
+    // Fire-and-forget email to supplier
+    if (result.proposition.fournisseurId) {
+      const fournisseur = await this.prisma.fournisseur.findUnique({
+        where: { id: result.proposition.fournisseurId },
+        select: { nom: true, email: true },
+      });
+      if (fournisseur?.email) {
+        void this.mailService
+          .sendCommandeNotification(
+            fournisseur.email,
+            {
+              commandeId: result.commande.id,
+              dateCreation: result.commande.dateCreation,
+              nomFournisseur: fournisseur.nom,
+              lignes: [
+                {
+                  nomProduit: (result as any).commandeLigne?.produit?.nom ?? 'Produit',
+                  quantite: result.commandeLigne.quantite,
+                  prixUnitaireAchat: result.prixUnitaire,
+                },
+              ],
+            },
+            'CREATION',
+          )
+          .catch((err) => this.logger.warn(`Email fournisseur échoué: ${err}`));
+      }
+    }
 
     return result;
   }

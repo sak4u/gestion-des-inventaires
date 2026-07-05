@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/layout/PageHeader';
 import { EmptyState, Spinner, BarcodeScanner } from '../components/ui/index';
-import { commandeLignesApi, commandesApi, entrepotsApi, fournisseursApi, produitsApi } from '../api/index';
+import { commandesApi, entrepotsApi, fournisseursApi, produitsApi } from '../api/index';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, AlertTriangle, Search, Camera, Trash2 } from 'lucide-react';
 
@@ -116,19 +116,13 @@ export default function NouvelleCommandePage() {
         userId: user.id,
         fournisseurId: type === 'ACHAT' ? fournisseurId : undefined,
         entrepotId,
+        lignes: lignes.map((l) => ({
+          produitId: l.produitId,
+          quantite: l.quantite,
+          prixUnitaire: l.prixUnitaire,
+        })),
       });
       const commandeId = (commandeRes.data as { id: string }).id;
-
-      await Promise.all(
-        lignes.map((l) =>
-          commandeLignesApi.create({
-            commandeId,
-            produitId: l.produitId,
-            quantite: l.quantite,
-            prixUnitaire: l.prixUnitaire,
-          }),
-        ),
-      );
 
       navigate(`/commandes/${commandeId}`);
     } catch (e: unknown) {

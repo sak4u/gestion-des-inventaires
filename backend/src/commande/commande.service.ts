@@ -239,15 +239,60 @@ export class CommandeService {
   async create(createCommandeDto: CreateCommandeDto) {
     this.validateCreateRules(createCommandeDto);
 
-    return this.prisma.commande.create({
-      data: createCommandeDto,
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        fournisseur: true,
-        commandesLigne: true,
-        entrepot: true,
-      },
+    const { lignes, ...commandeData } = createCommandeDto;
+
+    const commande = await this.prisma.$transaction(async (tx) => {
+      const cmd = await tx.commande.create({
+        data: commandeData,
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          fournisseur: true,
+          commandesLigne: { include: { produit: true } },
+          entrepot: true,
+        },
+      });
+
+      if (lignes?.length) {
+        await tx.commandeLigne.createMany({
+          data: lignes.map((l) => ({
+            commandeId: cmd.id,
+            produitId: l.produitId,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire ?? 0,
+          })),
+        });
+
+        const lignesWithProduit = await tx.commandeLigne.findMany({
+          where: { commandeId: cmd.id },
+          include: { produit: true },
+        });
+        (cmd as any).commandesLigne = lignesWithProduit;
+      }
+
+      return cmd;
     });
+
+    // Fire-and-forget email to supplier
+    if (commande.fournisseur?.email && (commande as any).commandesLigne?.length) {
+      void this.mailService
+        .sendCommandeNotification(
+          commande.fournisseur.email,
+          {
+            commandeId: commande.id,
+            dateCreation: commande.dateCreation,
+            nomFournisseur: commande.fournisseur.nom,
+            lignes: ((commande as any).commandesLigne as any[]).map((l: any) => ({
+              nomProduit: l.produit.nom,
+              quantite: l.quantite,
+              prixUnitaireAchat: l.prixUnitaire,
+            })),
+          },
+          'CREATION',
+        )
+        .catch((err) => this.logger.warn(`Email fournisseur échoué: ${err}`));
+    }
+
+    return commande;
   }
 
   async findAll(type?: TypeCommande, etat?: EtatCommande) {
@@ -377,16 +422,20 @@ export class CommandeService {
       // 4. Notify supplier via email (fire-and-forget)
       if (updatedCmd.fournisseur?.email) {
         void this.mailService
-          .sendCommandeNotification(updatedCmd.fournisseur.email, {
-            commandeId: updatedCmd.id,
-            dateCreation: updatedCmd.dateCreation,
-            nomFournisseur: updatedCmd.fournisseur.nom,
-            lignes: updatedCmd.commandesLigne.map((l: any) => ({
-              nomProduit: l.produit.nom,
-              quantite: l.quantite,
-              prixUnitaire: l.prixUnitaire,
-            })),
-          })
+          .sendCommandeNotification(
+            updatedCmd.fournisseur.email,
+            {
+              commandeId: updatedCmd.id,
+              dateCreation: updatedCmd.dateCreation,
+              nomFournisseur: updatedCmd.fournisseur.nom,
+              lignes: updatedCmd.commandesLigne.map((l: any) => ({
+                nomProduit: l.produit.nom,
+                quantite: l.quantite,
+                prixUnitaire: l.prixUnitaire,
+              })),
+            },
+            'LIVREE',
+          )
           .catch((err) =>
             this.logger.warn(`Email fournisseur échoué: ${err}`),
           );
@@ -417,16 +466,20 @@ export class CommandeService {
       if (updateCommandeDto.etat === EtatCommande.FERMEE) {
         if (updated.fournisseur?.email) {
           void this.mailService
-            .sendCommandeNotification(updated.fournisseur.email, {
-              commandeId: updated.id,
-              dateCreation: updated.dateCreation,
-              nomFournisseur: updated.fournisseur.nom,
-              lignes: updated.commandesLigne.map((l: any) => ({
-                nomProduit: l.produit.nom,
-                quantite: l.quantite,
-                prixUnitaire: l.prixUnitaire,
-              })),
-            })
+            .sendCommandeNotification(
+              updated.fournisseur.email,
+              {
+                commandeId: updated.id,
+                dateCreation: updated.dateCreation,
+                nomFournisseur: updated.fournisseur.nom,
+                lignes: updated.commandesLigne.map((l: any) => ({
+                  nomProduit: l.produit.nom,
+                  quantite: l.quantite,
+                  prixUnitaire: l.prixUnitaire,
+                })),
+              },
+              'FERMEE',
+            )
             .catch((err) =>
               this.logger.warn(`Email fournisseur échoué: ${err}`),
             );
