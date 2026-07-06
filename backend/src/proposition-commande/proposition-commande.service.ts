@@ -128,48 +128,60 @@ export class PropositionCommandeService {
       return null;
     }
 
-    try {
-      const proposition = await this.prisma.$transaction(
-        async (tx) => {
-          const existingPending = await tx.propositionCommande.findFirst({
-            where: { produitId, statut: StatutProposition.EN_ATTENTE },
-          });
-          if (existingPending) {
-            this.logger.debug(`Pending proposition already exists for "${produit.nom}". Skipping.`);
-            return null;
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const proposition = await this.prisma.$transaction(
+          async (tx) => {
+            const existingPending = await tx.propositionCommande.findFirst({
+              where: { produitId, statut: StatutProposition.EN_ATTENTE },
+            });
+            if (existingPending) {
+              this.logger.debug(`Pending proposition already exists for "${produit.nom}". Skipping.`);
+              return null;
+            }
+            return tx.propositionCommande.create({
+              data: {
+                produitId,
+                fournisseurId: bestSupplier.fournisseurId,
+                predictionId: predictionResult.predictionId,
+                quantiteProposee: predictionResult.quantiteRecommande,
+                scoreFournisseur: bestSupplier.score,
+                statut: StatutProposition.EN_ATTENTE,
+              },
+              include: { produit: true, fournisseur: true, prediction: true },
+            });
+          },
+          { isolationLevel: 'Serializable' },
+        );
+
+        if (!proposition) return null;
+
+        this.logger.log(
+          `✅ Proposition created for "${produit.nom}": qty=${predictionResult.quantiteRecommande}, ` +
+            `supplier="${bestSupplier.fournisseurNom}" (score=${bestSupplier.score})`,
+        );
+
+        // Trigger notification
+        this.notificationsGateway.alertNouvelleProposition(produit.nom, predictionResult.quantiteRecommande);
+
+        return proposition;
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('could not serialize')) {
+          if (attempt < MAX_RETRIES) {
+            this.logger.warn(
+              `Serialization conflict for "${produit.nom}" (attempt ${attempt}/${MAX_RETRIES}). Retrying...`,
+            );
+            await new Promise((r) => setTimeout(r, 200 * attempt));
+            continue;
           }
-          return tx.propositionCommande.create({
-            data: {
-              produitId,
-              fournisseurId: bestSupplier.fournisseurId,
-              predictionId: predictionResult.predictionId,
-              quantiteProposee: predictionResult.quantiteRecommande,
-              scoreFournisseur: bestSupplier.score,
-              statut: StatutProposition.EN_ATTENTE,
-            },
-            include: { produit: true, fournisseur: true, prediction: true },
-          });
-        },
-        { isolationLevel: 'Serializable' },
-      );
-
-      if (!proposition) return null;
-
-      this.logger.log(
-        `✅ Proposition created for "${produit.nom}": qty=${predictionResult.quantiteRecommande}, ` +
-          `supplier="${bestSupplier.fournisseurNom}" (score=${bestSupplier.score})`,
-      );
-
-      // Trigger notification
-      this.notificationsGateway.alertNouvelleProposition(produit.nom, predictionResult.quantiteRecommande);
-
-      return proposition;
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('could not serialize')) {
-        this.logger.warn(`Concurrent proposition creation for "${produit.nom}". Skipping.`);
-        return null;
+          this.logger.warn(
+            `Concurrent proposition creation for "${produit.nom}" failed after ${MAX_RETRIES} attempts. Skipping.`,
+          );
+          return null;
+        }
+        throw error;
       }
-      throw error;
     }
   }
 
