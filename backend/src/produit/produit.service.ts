@@ -23,8 +23,6 @@ export class ProduitService {
     const produits = await this.prisma.produit.findMany({
       include: {
         fournisseurProduits: { include: { fournisseur: true } },
-        commandesLigne: true,
-        predictions: true,
         stockEntrepots: { include: { entrepot: true } },
       },
     });
