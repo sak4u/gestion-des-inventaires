@@ -2,7 +2,7 @@ import * as React from 'react';
 import { io } from 'socket.io-client';
 import { apiClient } from '../api/index';
 
-const { createContext, useContext, useEffect, useState, useCallback } = React;
+const { createContext, useContext, useEffect, useState, useCallback, useRef } = React;
 type ReactNode = React.ReactNode;
 
 const SOCKET_URL = import.meta.env.VITE_WS_URL ?? (import.meta.env.DEV
@@ -52,6 +52,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const pollRef = useRef<() => Promise<void>>();
+
   // HTTP polling for notifications (works on all platforms including Vercel)
   useEffect(() => {
     if (!token) {
@@ -82,6 +84,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    pollRef.current = poll;
     void poll();
 
     const interval = setInterval(poll, 30000);
@@ -145,9 +148,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAllRead = useCallback(async () => {
     try {
       await apiClient.patch('/notifications/read-all');
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     } catch {
-      // fallback: optimistically mark all as read even if API fails
+      // fallback: continue even if API fails
+    }
+    // Re-poll to sync state with server
+    if (pollRef.current) {
+      await pollRef.current();
+    } else {
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     }
   }, []);
