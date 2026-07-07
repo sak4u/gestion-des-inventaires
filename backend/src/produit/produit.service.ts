@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProduitDto } from './dto/create-produit.dto';
 import { UpdateProduitDto } from './dto/update-produit.dto';
+import QRCode from 'qrcode';
 
 @Injectable()
 export class ProduitService {
@@ -22,8 +23,6 @@ export class ProduitService {
     const produits = await this.prisma.produit.findMany({
       include: {
         fournisseurProduits: { include: { fournisseur: true } },
-        commandesLigne: true,
-        predictions: true,
         stockEntrepots: { include: { entrepot: true } },
       },
     });
@@ -61,11 +60,59 @@ export class ProduitService {
     };
   }
 
+  async findOneByCodeBare(codeBare: string) {
+    const normalizedCodeBare = codeBare?.trim();
+    if (!normalizedCodeBare) {
+      throw new BadRequestException('Query param "codeBare" is required');
+    }
+    const produit = await this.prisma.produit.findFirst({
+      where: { codeBare: normalizedCodeBare },
+      include: {
+        fournisseurProduits: { include: { fournisseur: true } },
+        commandesLigne: { include: { commande: true } },
+        predictions: true,
+        stockEntrepots: { include: { entrepot: true } },
+      },
+    });
+
+    if (!produit) {
+      throw new NotFoundException(
+        `Produit with codeBare ${normalizedCodeBare} not found`,
+      );
+    }
+
+    return {
+      ...produit,
+      stockTotal: produit.stockEntrepots.reduce((sum, se) => sum + se.quantite, 0),
+    };
+  }
+
+  async generateQrCodeFromCodeBare(codeBare: string) {
+    const produit = await this.findOneByCodeBare(codeBare);
+    const qrCodeDataUrl = await QRCode.toDataURL(produit.codeBare, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 320,
+    });
+
+    return {
+      produitId: produit.id,
+      codeBare: produit.codeBare,
+      produitNom: produit.nom,
+      qrCodeDataUrl,
+    };
+  }
+
   async update(id: string, updateProduitDto: UpdateProduitDto) {
     try {
+      // Guard: prixAchatMoyen (CUMP) must never be overwritten via REST update.
+      // It is recalculated automatically by generateFluxStock() on ACHAT deliveries.
+      const { ...safeDto } = updateProduitDto as Record<string, unknown>;
+      delete safeDto['prixAchatMoyen'];
+
       return await this.prisma.produit.update({
         where: { id },
-        data: updateProduitDto,
+        data: safeDto,
         include: {
           fournisseurProduits: { include: { fournisseur: true } },
           predictions: true,

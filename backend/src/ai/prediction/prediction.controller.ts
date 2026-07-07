@@ -33,7 +33,7 @@ import { Roles } from '../../auth/roles.decorator';
  * "product" or "generate-all" as an ID parameter.
  */
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('RESPONSABLE_APPRO', 'ADMINISTRATEUR') // Only these roles can access predictions
+@Roles('ADMIN', 'RESPONSABLE_STOCK') // Only these roles can access predictions
 @Controller('ai/predictions')
 export class PredictionController {
   private readonly logger = new Logger(PredictionController.name);

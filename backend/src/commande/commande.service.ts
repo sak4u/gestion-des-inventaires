@@ -1,9 +1,18 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCommandeDto } from './dto/create-commande.dto';
 import { UpdateCommandeDto } from './dto/update-commande.dto';
 import { MailService } from '../mail/mail.service';
-import { EtatCommande } from '@prisma/client';
+import { EtatCommande, TypeCommande } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { PredictionService } from '../ai/prediction/prediction.service';
+import { PropositionCommandeService } from '../proposition-commande/proposition-commande.service';
 
 @Injectable()
 export class CommandeService {
@@ -12,27 +21,294 @@ export class CommandeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly notificationsGateway: NotificationsGateway,
+    private readonly predictionService: PredictionService,
+    private readonly propositionService: PropositionCommandeService,
   ) {}
 
-  async create(createCommandeDto: CreateCommandeDto) {
-    return this.prisma.commande.create({
-      data: createCommandeDto,
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        fournisseur: true,
-        commandesLigne: true,
-      },
-    });
+  // ─────────────────────────────────────────────────────────────────
+  //  HELPER: validate business rules per commande type
+  // ─────────────────────────────────────────────────────────────────
+
+  private validateCreateRules(dto: CreateCommandeDto) {
+    const type = dto.type ?? TypeCommande.ACHAT;
+
+    if (type === TypeCommande.ACHAT && !dto.fournisseurId) {
+      throw new BadRequestException(
+        "Une commande d'achat doit obligatoirement être liée à un fournisseur.",
+      );
+    }
+    if (type === TypeCommande.ACHAT && !dto.entrepotId) {
+      throw new BadRequestException(
+        "Une commande d'achat doit obligatoirement avoir un entrepôt de réception.",
+      );
+    }
   }
 
-  async findAll() {
+  // ─────────────────────────────────────────────────────────────────
+  //  HELPER: check and notify stock alerts
+  // ─────────────────────────────────────────────────────────────────
+
+  private async checkAndAlertStockBas(
+    produitId: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    try {
+      const client = tx ?? this.prisma;
+      const agg = await client.stockEntrepot.aggregate({
+        where: { produitId },
+        _sum: { quantite: true },
+      });
+      const stockTotal = agg._sum.quantite ?? 0;
+
+      const produit = await client.produit.findUnique({
+        where: { id: produitId },
+        select: { nom: true, stockAlert: true },
+      });
+
+      if (produit && stockTotal <= (produit.stockAlert ?? 0)) {
+        this.notificationsGateway.alertStockBas(
+          produit.nom,
+          stockTotal,
+          produit.stockAlert ?? 0,
+        );
+        // Trigger AI evaluation when stock is low
+        void this.triggerPredictionUpdate(produitId);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error checking stock alert in CommandeService: ${error.message}`,
+      );
+    }
+  }
+
+  private async triggerPredictionUpdate(produitId: string): Promise<void> {
+    try {
+      this.logger.log(`Low stock detected for ${produitId} — triggering AI proposition...`);
+      await this.predictionService.generatePrediction(produitId);
+      await this.propositionService.generateProposition(produitId);
+    } catch (error) {
+      this.logger.warn(`AI trigger failed for ${produitId}: ${error.message}`);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  HELPER: generate achat flux for all lignes (called inside tx)
+  //  Only triggered when a ACHAT commande transitions to LIVREE.
+  // ─────────────────────────────────────────────────────────────────
+
+  private async generateFluxStock(
+    commandeId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<string[]> {
+    const affectedProduitIds: string[] = [];
+    const commande = await tx.commande.findUnique({
+      where: { id: commandeId },
+      include: {
+        commandesLigne: { include: { produit: true } },
+        entrepot: { select: { id: true, capaciteMax: true } },
+      },
+    });
+
+    if (!commande) throw new NotFoundException(`Commande ${commandeId} introuvable`);
+    if (!commande.entrepotId) {
+      throw new BadRequestException(
+        `Impossible de valider : aucun entrepôt ${commande.type === 'ACHAT' ? 'réception' : 'source'} défini sur la commande.`,
+      );
+    }
+    if (commande.commandesLigne.length === 0) {
+      throw new BadRequestException(
+        "Impossible de valider : la commande ne contient aucune ligne.",
+      );
+    }
+
+    const isAchat = commande.type === TypeCommande.ACHAT;
+
+    for (const ligne of commande.commandesLigne) {
+      // Delta is positive for ACHAT (reception) and negative for VENTE (expedition)
+      const delta = isAchat ? ligne.quantite : -ligne.quantite;
+
+      // ── Fetch current localized stock ──
+      const currentLocal = await tx.stockEntrepot.findUnique({
+        where: {
+          produitId_entrepotId: {
+            produitId: ligne.produitId,
+            entrepotId: commande.entrepotId!,
+          },
+        },
+        select: { quantite: true },
+      });
+      const localStock = currentLocal?.quantite ?? 0;
+
+      // Validate no negative stock for VENTE
+      if (!isAchat && localStock + delta < 0) {
+        throw new BadRequestException(
+          `Stock insuffisant dans l'entrepôt pour "${ligne.produit.nom}". ` +
+          `Disponible: ${localStock}, Demandé: ${Math.abs(delta)}`
+        );
+      }
+
+      // ── Validate warehouse capacity for ACHAT ──
+      if (isAchat && commande.entrepot?.capaciteMax != null) {
+        const agg = await tx.stockEntrepot.aggregate({
+          where: { entrepotId: commande.entrepotId! },
+          _sum: { quantite: true },
+        });
+        const currentTotal = agg._sum.quantite ?? 0;
+        if (currentTotal + delta > commande.entrepot.capaciteMax) {
+          throw new BadRequestException(
+            `Capacité de l'entrepôt dépassée pour le produit "${ligne.produit.nom}". ` +
+              `Capacité max: ${commande.entrepot.capaciteMax}, stock actuel: ${currentTotal}, réception: +${delta}`,
+          );
+        }
+      }
+
+      // ── Upsert StockEntrepot ──
+      await tx.stockEntrepot.upsert({
+        where: {
+          produitId_entrepotId: {
+            produitId: ligne.produitId,
+            entrepotId: commande.entrepotId!,
+          },
+        },
+        create: {
+          produitId: ligne.produitId,
+          entrepotId: commande.entrepotId!,
+          quantite: Math.max(0, delta),
+        },
+        update: { quantite: { increment: delta } },
+      });
+
+      // ── CUMP recalculation (Only for ACHAT) ──
+      if (isAchat) {
+        const produit = await tx.produit.findUnique({
+          where: { id: ligne.produitId },
+          select: { prixAchatMoyen: true },
+        });
+        const prixAchat = (ligne as any).prixUnitaire;
+
+        if (prixAchat > 0 && produit) {
+          const aggGlobal = await tx.stockEntrepot.aggregate({
+            where: { produitId: ligne.produitId },
+            _sum: { quantite: true },
+          });
+          const globalStockAfter = aggGlobal._sum.quantite ?? 0;
+          const globalStockBefore = Math.max(0, globalStockAfter - delta);
+          const totalValeurAncienne = globalStockBefore * ((produit as any).prixAchatMoyen || 0);
+          const valeurEntrante = delta * prixAchat;
+          const newPrixAchatMoyen =
+            globalStockAfter > 0
+              ? (totalValeurAncienne + valeurEntrante) / globalStockAfter
+              : prixAchat;
+
+          await tx.produit.update({
+            where: { id: ligne.produitId },
+            data: { prixAchatMoyen: newPrixAchatMoyen },
+          });
+        }
+      }
+
+      // ── Create FluxDeStock (achat or vente) ──
+      await tx.fluxDeStock.create({
+        data: {
+          quantite: ligne.quantite,
+          type: isAchat ? 'achat' : 'vente',
+          note: `${isAchat ? 'Réception' : 'Expédition'} automatique — Commande #${commandeId}`,
+          produitId: ligne.produitId,
+          entrepotId: commande.entrepotId!,
+          creerParId: commande.userId,
+          commandeId: commande.id,
+        },
+      });
+
+      this.logger.log(
+        `Flux ${isAchat ? 'achat' : 'vente'} auto: ${isAchat ? '+' : '-'}${ligne.quantite} "${ligne.produit.nom}"`,
+      );
+
+      if (!affectedProduitIds.includes(ligne.produitId)) {
+        affectedProduitIds.push(ligne.produitId);
+      }
+    }
+    return affectedProduitIds;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  CREATE
+  // ─────────────────────────────────────────────────────────────────
+
+  async create(createCommandeDto: CreateCommandeDto) {
+    this.validateCreateRules(createCommandeDto);
+
+    const { lignes, ...commandeData } = createCommandeDto;
+
+    const commande = await this.prisma.$transaction(async (tx) => {
+      const cmd = await tx.commande.create({
+        data: commandeData,
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          fournisseur: true,
+          commandesLigne: { include: { produit: true } },
+          entrepot: true,
+        },
+      });
+
+      if (lignes?.length) {
+        await tx.commandeLigne.createMany({
+          data: lignes.map((l) => ({
+            commandeId: cmd.id,
+            produitId: l.produitId,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire ?? 0,
+          })),
+        });
+
+        const lignesWithProduit = await tx.commandeLigne.findMany({
+          where: { commandeId: cmd.id },
+          include: { produit: true },
+        });
+        (cmd as any).commandesLigne = lignesWithProduit;
+      }
+
+      return cmd;
+    });
+
+    // Fire-and-forget email to supplier
+    if (commande.fournisseur?.email && (commande as any).commandesLigne?.length) {
+      void this.mailService
+        .sendCommandeNotification(
+          commande.fournisseur.email,
+          {
+            commandeId: commande.id,
+            dateCreation: commande.dateCreation,
+            nomFournisseur: commande.fournisseur.nom,
+            lignes: ((commande as any).commandesLigne as any[]).map((l: any) => ({
+              nomProduit: l.produit.nom,
+              quantite: l.quantite,
+              prixUnitaireAchat: l.prixUnitaire,
+            })),
+          },
+          'CREATION',
+        )
+        .catch((err) => this.logger.warn(`Email fournisseur échoué: ${err}`));
+    }
+
+    return commande;
+  }
+
+  async findAll(type?: TypeCommande, etat?: EtatCommande) {
+    const where: Prisma.CommandeWhereInput = {};
+    if (type) where.type = type;
+    if (etat) where.etat = etat;
+
     return this.prisma.commande.findMany({
+      where,
       include: {
         user: { select: { id: true, name: true, email: true } },
         fournisseur: true,
         commandesLigne: { include: { produit: true } },
         entrepot: true,
       },
+      orderBy: { dateCreation: 'desc' },
     });
   }
 
@@ -44,6 +320,7 @@ export class CommandeService {
         fournisseur: true,
         commandesLigne: { include: { produit: true } },
         entrepot: true,
+        fluxDeStocks: true,
       },
     });
     if (!commande) {
@@ -52,7 +329,127 @@ export class CommandeService {
     return commande;
   }
 
+  async getFinancialStats() {
+    const deliveredSales = await this.prisma.commande.findMany({
+      where: {
+        type: TypeCommande.VENTE,
+        etat: EtatCommande.LIVREE,
+      },
+      include: {
+        commandesLigne: {
+          include: {
+            produit: {
+              select: { prixAchatMoyen: true },
+            },
+          },
+        },
+      },
+    });
+
+    let totalRevenue = 0;
+    let totalCOGS = 0;
+
+    for (const cmd of deliveredSales) {
+      const lines = (cmd as any).commandesLigne || [];
+      for (const line of lines) {
+        const rev = line.quantite * (line.prixUnitaire || 0);
+        const cost = line.quantite * (line.produit?.prixAchatMoyen || 0);
+        totalRevenue += rev;
+        totalCOGS += cost;
+      }
+    }
+
+    return {
+      revenue: totalRevenue,
+      cogs: totalCOGS,
+      profit: totalRevenue - totalCOGS,
+      margin: totalRevenue > 0 ? ((totalRevenue - totalCOGS) / totalRevenue) * 100 : 0,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  UPDATE — handles state transitions with business rules
+  // ─────────────────────────────────────────────────────────────────
+
   async update(id: string, updateCommandeDto: UpdateCommandeDto) {
+    const existing = await this.prisma.commande.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`Commande with ID ${id} not found`);
+
+    const LOCKED_STATES: EtatCommande[] = [
+      EtatCommande.LIVREE,
+      EtatCommande.ANNULEE,
+    ];
+
+    // Block any modifications on locked commandes
+    if (LOCKED_STATES.includes(existing.etat)) {
+      throw new BadRequestException(
+        `La commande est déjà "${existing.etat}" et ne peut plus être modifiée.`,
+      );
+    }
+
+    // Transition to LIVREE — applies to both ACHAT and VENTE
+    if (updateCommandeDto.etat === EtatCommande.LIVREE) {
+      const updated = await this.prisma.$transaction(
+        async (tx) => {
+          // 1. Generate stock flux automatically and get affected products
+          const affectedProduitIds = await this.generateFluxStock(id, tx);
+
+          // 2. Update the commande state
+          const updatedCmd = await tx.commande.update({
+            where: { id },
+            data: { etat: EtatCommande.LIVREE },
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+              fournisseur: true,
+              commandesLigne: { include: { produit: true } },
+              entrepot: true,
+              fluxDeStocks: true,
+            },
+          });
+
+          return { updatedCmd, affectedProduitIds };
+        },
+        { isolationLevel: 'Serializable' },
+      );
+
+      const { updatedCmd, affectedProduitIds } = updated;
+
+      // 3. Post-commit: Stock Alerts & AI Propositions
+      for (const produitId of affectedProduitIds) {
+        void this.checkAndAlertStockBas(produitId);
+      }
+
+      // 4. Notify supplier via email (fire-and-forget)
+      if (updatedCmd.fournisseur?.email) {
+        void this.mailService
+          .sendCommandeNotification(
+            updatedCmd.fournisseur.email,
+            {
+              commandeId: updatedCmd.id,
+              dateCreation: updatedCmd.dateCreation,
+              nomFournisseur: updatedCmd.fournisseur.nom,
+              lignes: updatedCmd.commandesLigne.map((l: any) => ({
+                nomProduit: l.produit.nom,
+                quantite: l.quantite,
+                prixUnitaire: l.prixUnitaire,
+              })),
+            },
+            'LIVREE',
+          )
+          .catch((err) =>
+            this.logger.warn(`Email fournisseur échoué: ${err}`),
+          );
+      }
+
+      this.logger.log(`Commande ${id} passée à LIVREE — flux générés automatiquement`);
+
+      // Trigger notification for delivery
+      this.notificationsGateway.alertCommandeLivree(id);
+
+      return updatedCmd;
+    }
+
+    // Standard state update (EN_COURS → FERMEE, etc.)
     try {
       const updated = await this.prisma.commande.update({
         where: { id },
@@ -65,31 +462,28 @@ export class CommandeService {
         },
       });
 
-      // ── Fire-and-forget email notification when order is closed ──
-      // We only trigger if the incoming update explicitly sets etat to FERMEE.
-      // The mail method handles its own errors so this never blocks the HTTP response.
+      // Legacy: email on FERMEE
       if (updateCommandeDto.etat === EtatCommande.FERMEE) {
         if (updated.fournisseur?.email) {
-          void this.mailService.sendCommandeNotification(
-            updated.fournisseur.email,
-            {
-              commandeId: updated.id,
-              dateCreation: updated.dateCreation,
-              nomFournisseur: updated.fournisseur.nom,
-              lignes: updated.commandesLigne.map((ligne) => ({
-                nomProduit: ligne.produit.nom,
-                quantite: ligne.quantite,
-                prixUnitaireAchat: ligne.prixUnitaireAchat,
-              })),
-            },
-          );
-          this.logger.log(
-            `Commande ${id} closed (état: FERMEE) — email notification dispatched to ${updated.fournisseur.email}`,
-          );
-        } else {
-          this.logger.warn(
-            `Commande ${id} closed but supplier has no email — notification skipped`,
-          );
+          void this.mailService
+            .sendCommandeNotification(
+              updated.fournisseur.email,
+              {
+                commandeId: updated.id,
+                dateCreation: updated.dateCreation,
+                nomFournisseur: updated.fournisseur.nom,
+                lignes: updated.commandesLigne.map((l: any) => ({
+                  nomProduit: l.produit.nom,
+                  quantite: l.quantite,
+                  prixUnitaire: l.prixUnitaire,
+                })),
+              },
+              'FERMEE',
+            )
+            .catch((err) =>
+              this.logger.warn(`Email fournisseur échoué: ${err}`),
+            );
+          this.logger.log(`Commande ${id} fermée — email dispatché`);
         }
       }
 
@@ -100,6 +494,15 @@ export class CommandeService {
   }
 
   async remove(id: string) {
+    const existing = await this.prisma.commande.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`Commande with ID ${id} not found`);
+
+    if (existing.etat === EtatCommande.LIVREE) {
+      throw new BadRequestException(
+        "Une commande livrée ne peut pas être supprimée.",
+      );
+    }
+
     try {
       return await this.prisma.commande.delete({ where: { id } });
     } catch {

@@ -8,6 +8,8 @@ export interface CommandeLigneMailData {
   prixUnitaireAchat?: number | null;
 }
 
+export type CommandeNotificationType = 'CREATION' | 'FERMEE' | 'LIVREE';
+
 export interface CommandeMailData {
   commandeId: string;
   dateCreation: Date;
@@ -51,24 +53,46 @@ export class MailService {
   }
 
   /**
-   * Sends a purchase order summary to the supplier when the order is closed ('Fermée').
+   * Sends a purchase order summary to the supplier.
    *
    * This method is intentionally fire-and-forget friendly:
    * it catches its own errors and logs them without throwing,
    * so a mail failure never blocks the HTTP response.
    *
-   * @param email  Supplier email address
-   * @param data   Order details (id, date, lignes)
+   * @param email   Supplier email address
+   * @param data    Order details (id, date, lignes)
+   * @param type    Notification context ('CREATION' | 'FERMEE' | 'LIVREE')
    */
   async sendCommandeNotification(
     email: string,
     data: CommandeMailData,
+    type: CommandeNotificationType = 'FERMEE',
   ): Promise<void> {
     const dateStr = new Date(data.dateCreation).toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
     });
+
+    const labels: Record<CommandeNotificationType, { header: string; body: string; subject: string }> = {
+      CREATION: {
+        header: '📦 Nouvelle Commande Créée',
+        body: 'Une nouvelle commande vient d\'être <b style="color:#1e40af;">créée</b> à votre attention. Veuillez trouver ci-dessous le détail des articles à préparer :',
+        subject: `📦 Commande #${data.commandeId.slice(0, 8).toUpperCase()} — Nouvelle commande à préparer`,
+      },
+      FERMEE: {
+        header: '📦 Commande Fermée',
+        body: 'Une commande vous concernant vient d\'être <b style="color:#1e40af;">fermée et validée</b>. Voici le récapitulatif :',
+        subject: `📦 Commande #${data.commandeId.slice(0, 8).toUpperCase()} — Fermée et en attente de livraison`,
+      },
+      LIVREE: {
+        header: '📦 Commande Livrée',
+        body: 'Une commande vous concernant vient d\'être marquée comme <b style="color:#1e40af;">livrée</b>. Voici le récapitulatif :',
+        subject: `📦 Commande #${data.commandeId.slice(0, 8).toUpperCase()} — Livrée`,
+      },
+    };
+
+    const { header, body, subject } = labels[type];
 
     // ── Build the products table rows ──
     const rows = data.lignes
@@ -103,7 +127,7 @@ export class MailService {
         <!-- Header -->
         <tr>
           <td style="background:linear-gradient(135deg,#1e40af,#3b82f6);padding:32px 40px;">
-            <h1 style="margin:0;color:#ffffff;font-size:22px;">📦 Nouvelle Commande Fermée</h1>
+            <h1 style="margin:0;color:#ffffff;font-size:22px;">${header}</h1>
             <p style="margin:6px 0 0;color:#bfdbfe;font-size:14px;">Système de Gestion des Inventaires</p>
           </td>
         </tr>
@@ -112,10 +136,7 @@ export class MailService {
         <tr>
           <td style="padding:32px 40px;">
             <p style="color:#374151;font-size:15px;">Bonjour <b>${data.nomFournisseur}</b>,</p>
-            <p style="color:#374151;font-size:15px;">
-              Une commande vous concernant vient d'être <b style="color:#1e40af;">fermée et validée</b>.
-              Voici le récapitulatif :
-            </p>
+            <p style="color:#374151;font-size:15px;">${body}</p>
 
             <!-- Order Meta -->
             <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;background:#f9fafb;border-radius:8px;padding:16px;">
@@ -170,11 +191,11 @@ export class MailService {
       await this.transporter.sendMail({
         from: '"Gestion Inventaire" <no-reply@gestion-inventaire.com>',
         to: email,
-        subject: `📦 Commande #${data.commandeId.slice(0, 8).toUpperCase()} — Fermée et en attente de livraison`,
+        subject,
         html,
       });
       this.logger.log(
-        `Commande notification sent to supplier at ${email} (commande: ${data.commandeId})`,
+        `Commande notification sent to supplier at ${email} (commande: ${data.commandeId}, type: ${type})`,
       );
     } catch (error) {
       // Non-blocking: log but don't throw — a failed mail must not rollback the update

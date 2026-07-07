@@ -13,12 +13,12 @@ export class FournisseurProduitService {
       include: { fournisseur: true, produit: true },
     });
 
-    if (fp.produit && fp.produit.prixActuel === 0 && fp.prixAchat > 0) {
+    if (fp.produit && fp.produit.prixAchatMoyen === 0 && fp.prixAchat > 0) {
       await this.prisma.produit.update({
         where: { id: fp.produitId },
-        data: { prixActuel: fp.prixAchat },
+        data: { prixAchatMoyen: fp.prixAchat },
       });
-      fp.produit.prixActuel = fp.prixAchat;
+      fp.produit.prixAchatMoyen = fp.prixAchat;
     }
 
     return fp;
@@ -52,12 +52,12 @@ export class FournisseurProduitService {
         include: { fournisseur: true, produit: true },
       });
 
-      if (fp.produit && fp.produit.prixActuel === 0 && fp.prixAchat > 0) {
+      if (fp.produit && fp.produit.prixAchatMoyen === 0 && fp.prixAchat > 0) {
         await this.prisma.produit.update({
           where: { id: fp.produitId },
-          data: { prixActuel: fp.prixAchat },
+          data: { prixAchatMoyen: fp.prixAchat },
         });
-        fp.produit.prixActuel = fp.prixAchat;
+        fp.produit.prixAchatMoyen = fp.prixAchat;
       }
 
       return fp;

@@ -17,7 +17,15 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: process.env.FRONTEND_URL ?? '*',
+    origin: [
+      'http://localhost:5173',
+      'http://192.168.1.19:5173',
+      'https://192.168.1.16:5173',
+      'https://localhost:5173',
+      'https://gestion-des-inventaires-backend.vercel.app',
+      'http://gestion-des-inventaires-backend.vercel.app',
+      'https://gestion-des-inventaires-i8mw.vercel.app'
+    ],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -31,8 +39,8 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(`Server is running on http://localhost:${process.env.PORT ?? 3000}`);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  console.log(`Server is running on http://192.168.1.19:${process.env.PORT ?? 3000}`);
 }
 
 void bootstrap();

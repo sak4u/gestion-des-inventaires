@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthLeftPanel } from '../components/AuthLeftPanel';
 import api from '../api/client';
+import { AlertTriangle, Mail, Lock, Eye, EyeOff, Key, PartyPopper, Check } from 'lucide-react';
 
 type Step = 'email' | 'code' | 'password' | 'done';
 
 const STEPS: { key: Step; label: string }[] = [
-  { key: 'email',    label: 'Email' },
-  { key: 'code',     label: 'Code' },
+  { key: 'email', label: 'Email' },
+  { key: 'code', label: 'Code' },
   { key: 'password', label: 'Nouveau MDP' },
 ];
 
@@ -21,7 +22,7 @@ function StepIndicator({ current }: { current: Step }) {
             key={s.key}
             className={`step ${current === 'done' || i < currentIdx ? 'done' : i === currentIdx ? 'active' : ''}`}
           >
-            {current === 'done' || i < currentIdx ? '✓' : i + 1}
+            {current === 'done' || i < currentIdx ? <Check size={16} strokeWidth={3} /> : i + 1}
           </div>
           {i < STEPS.length - 1 && (
             <div
@@ -36,13 +37,13 @@ function StepIndicator({ current }: { current: Step }) {
 }
 
 export default function ForgotPasswordPage() {
-  const [step, setStep]       = useState<Step>('email');
-  const [email, setEmail]     = useState('');
-  const [code, setCode]       = useState('');
-  const [newPwd, setNewPwd]   = useState('');
+  const [step, setStep] = useState<Step>('email');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [newPwd, setNewPwd] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
 
   // Step 1 — send reset code
   const handleSendCode = async (e: React.FormEvent) => {
@@ -92,8 +93,8 @@ export default function ForgotPasswordPage() {
               <div className="auth-card-header">
                 <h2>Mot de passe oublié</h2>
                 <p>
-                  {step === 'email'    && 'Entrez votre email pour recevoir un code de réinitialisation.'}
-                  {step === 'code'     && `Un code à 6 chiffres a été envoyé à ${email}.`}
+                  {step === 'email' && 'Entrez votre email pour recevoir un code de réinitialisation.'}
+                  {step === 'code' && `Un code à 6 chiffres a été envoyé à ${email}.`}
                   {step === 'password' && 'Définissez votre nouveau mot de passe.'}
                 </p>
               </div>
@@ -101,7 +102,7 @@ export default function ForgotPasswordPage() {
             </>
           )}
 
-          {error && <div className="alert alert-error">⚠️ {error}</div>}
+          {error && <div className="alert alert-error" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={18} /> {error}</div>}
 
           {/* ─── Step 1 : Email ─── */}
           {step === 'email' && (
@@ -109,7 +110,7 @@ export default function ForgotPasswordPage() {
               <div className="form-group">
                 <label className="form-label" htmlFor="fp-email">Adresse e-mail</label>
                 <div className="input-wrapper">
-                  <span className="input-icon">✉️</span>
+                  <span className="input-icon"><Mail size={18} /></span>
                   <input id="fp-email" type="email" className="form-input"
                     placeholder="vous@exemple.com"
                     value={email} onChange={e => setEmail(e.target.value)} required />
@@ -130,7 +131,7 @@ export default function ForgotPasswordPage() {
               <div className="form-group">
                 <label className="form-label" htmlFor="fp-code">Code de vérification</label>
                 <div className="input-wrapper">
-                  <span className="input-icon">🔑</span>
+                  <span className="input-icon"><Key size={18} /></span>
                   <input
                     id="fp-code"
                     type="text"
@@ -163,7 +164,7 @@ export default function ForgotPasswordPage() {
               <div className="form-group">
                 <label className="form-label" htmlFor="fp-newpwd">Nouveau mot de passe</label>
                 <div className="input-wrapper">
-                  <span className="input-icon">🔒</span>
+                  <span className="input-icon"><Lock size={18} /></span>
                   <input
                     id="fp-newpwd"
                     type={showPwd ? 'text' : 'password'}
@@ -174,12 +175,12 @@ export default function ForgotPasswordPage() {
                     required
                   />
                   <button type="button" className="input-action" onClick={() => setShowPwd(v => !v)}>
-                    {showPwd ? '🙈' : '👁️'}
+                    {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
-              <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? <><span className="spinner" /> Réinitialisation...</> : '✓ Réinitialiser le mot de passe'}
+              <button type="submit" className="btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} disabled={loading}>
+                {loading ? <><span className="spinner" /> Réinitialisation...</> : <><Check size={16} /> Réinitialiser le mot de passe</>}
               </button>
             </form>
           )}
@@ -187,7 +188,7 @@ export default function ForgotPasswordPage() {
           {/* ─── Done ─── */}
           {step === 'done' && (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+              <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><PartyPopper size={56} color="var(--primary)" /></div>
               <h2 style={{ fontSize: 22, marginBottom: 8 }}>Mot de passe réinitialisé !</h2>
               <p style={{ color: 'var(--text-secondary)', marginBottom: 28, fontSize: 14 }}>
                 Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter.

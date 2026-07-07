@@ -1,0 +1,6 @@
+-- Fusion MAGASINIER → RESPONSABLE_STOCK
+UPDATE "User"
+SET "roleId" = (SELECT id FROM "Role" WHERE name = 'RESPONSABLE_STOCK')
+WHERE "roleId" = (SELECT id FROM "Role" WHERE name = 'MAGASINIER');
+
+DELETE FROM "Role" WHERE name = 'MAGASINIER';

@@ -3,9 +3,10 @@ import { FluxDeStockService } from './flux-de-stock.service';
 import { FluxDeStockController } from './flux-de-stock.controller';
 import { AiModule } from '../ai/ai.module';
 import { PropositionCommandeModule } from '../proposition-commande/proposition-commande.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [AiModule, PropositionCommandeModule],
+  imports: [AiModule, PropositionCommandeModule, NotificationsModule],
   controllers: [FluxDeStockController],
   providers: [FluxDeStockService],
   exports: [FluxDeStockService],

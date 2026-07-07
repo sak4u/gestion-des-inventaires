@@ -13,7 +13,7 @@ export class CreateCommandeLigneDto {
 
   @IsNumber()
   @IsOptional()
-  prixUnitaireAchat?: number;
+  prixUnitaire?: number;
 
   @IsUUID()
   @IsNotEmpty()

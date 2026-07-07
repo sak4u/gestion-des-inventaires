@@ -4,9 +4,13 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
+import { StatutProposition } from '@prisma/client';
 import { PropositionCommandeService } from './proposition-commande.service';
 import { AcceptPropositionDto } from './dto/accept-proposition.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -14,17 +18,37 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('RESPONSABLE_APPRO','ADMINISTRATEUR')
+@Roles('ADMIN', 'ACHAT')
 @Controller('propositions')
 export class PropositionCommandeController {
   constructor(
     private readonly propositionService: PropositionCommandeService,
   ) {}
 
+  // ── Enum values (dynamic) ─────────────────────────────────────
+  @Get('enums')
+  getEnums() {
+    return {
+      statuts: Object.values(StatutProposition),
+    };
+  }
+
   // ── List all propositions ─────────────────────────────────────
   @Get()
-  findAll() {
-    return this.propositionService.findAll();
+  findAll(
+    @Query('statut') statut?: string,
+    @Query('search') search?: string,
+    @Query('produitId') produitId?: string,
+    @Query('fournisseurId') fournisseurId?: string,
+    @Query('commandeEtat') commandeEtat?: string,
+  ) {
+    return this.propositionService.findAll({
+      statut: statut as StatutProposition | undefined,
+      search,
+      produitId,
+      fournisseurId,
+      commandeEtat: commandeEtat as any,
+    });
   }
 
   // ── List only pending propositions ────────────────────────────
@@ -35,6 +59,7 @@ export class PropositionCommandeController {
 
   // ── Manually trigger check for all products ───────────────────
   @Post('check-all')
+  @HttpCode(HttpStatus.OK)
   checkAll() {
     return this.propositionService.checkAllProducts();
   }

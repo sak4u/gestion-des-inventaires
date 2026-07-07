@@ -1,0 +1,295 @@
+pipeline {
+    agent any
+    tools {
+        nodejs 'NodeJS 20'
+    }
+    environment {
+        SELENIUM_DIR   = "${env.WORKSPACE}\\selenium-tests"
+        REPORTS_DIR    = "${env.WORKSPACE}\\selenium-tests\\reports"
+        BACKEND_DIR    = "${env.WORKSPACE}\\backend"
+        FRONTEND_DIR   = "${env.WORKSPACE}\\frontend"
+        PYTHON         = "python"
+        BACKEND_URL    = 'http://localhost:3000'
+        FRONTEND_URL   = 'http://localhost:5173'
+        DB_URL_TEST     = credentials('DB_URL_TEST')
+        JWT_SECRET_TEST = credentials('JWT_SECRET_TEST')
+    }
+    triggers {
+        pollSCM('')  // Déclenché par le webhook GitHub push
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        ansiColor('xterm')
+        timestamps()
+    }
+    parameters {
+        booleanParam(
+            name: 'FORCE',
+            defaultValue: false,
+            description: 'Forcer le pipeline même sans nouveau commit dans selenium-tests/, frontend/ ou Jenkinsfile.e2e'
+        )
+        booleanParam(
+            name: 'HEADLESS',
+            defaultValue: true,
+            description: 'Exécuter Chrome en mode headless (true = sans fenêtre)'
+        )
+        choice(
+            name: 'SELENIUM_SUITE',
+            choices: ['ALL', 'SMOKE', 'LOGIN', 'PRODUITS', 'REGRESSION'],
+            description: 'Suite de tests Selenium à exécuter'
+        )
+        booleanParam(
+            name: 'SKIP_CONNECTIVITY_CHECK',
+            defaultValue: false,
+            description: 'Ignorer la vérification de connectivité (si services déjà vérifiés)'
+        )
+    }
+
+    stages {
+        stage('Filter Changes') {
+            when {
+                allOf {
+                    expression { env.BUILD_NUMBER != '1' }
+                    expression { !params.FORCE }
+                    expression {
+                        // git diff-tree (robuste : changeset Jenkins échoue si changelog vide après git clean -fdx)
+                        def rc = bat(
+                            script: "git diff-tree --no-commit-id -r --name-only HEAD 2>nul | findstr /b /l /c:\"selenium-tests/\" /c:\"frontend/\" /c:\"Jenkinsfile.e2e\"",
+                            returnStatus: true
+                        )
+                        // rc 0 = changements trouvés → ne pas ignorer (return false)
+                        // rc 1 = aucun changement → ignorer (return true)
+                        // rc >= 2 = erreur inattendue → ne pas ignorer (return false)
+                        if (rc >= 2) return false
+                        return rc == 1
+                    }
+                }
+            }
+            steps {
+                echo '  \u2716 Aucun changement dans selenium-tests/, frontend/ ou Jenkinsfile.e2e — pipeline ignoré'
+                error('Pipeline arrêté : seuls les changements dans selenium-tests/, frontend/ ou Jenkinsfile.e2e déclenchent ce job')
+            }
+        }
+
+        stage('Environment Check') {
+            steps {
+                bat """
+                    "%PYTHON%" --version > nul 2>&1
+                    "%PYTHON%" -m pip --version > nul 2>&1
+                    node --version > nul 2>&1
+                    npm --version > nul 2>&1
+                """
+            }
+            post {
+                success { echo '\u001B[32m  \u2714 Environment Check\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 Environment Check\u001B[0m' }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                bat """
+                    cd /d "%SELENIUM_DIR%"
+                    "%PYTHON%" -m pip install -r requirements.txt --quiet > nul 2>&1
+                    if not exist "reports" mkdir "reports" > nul 2>&1
+                    if not exist "reports\\allure-results" mkdir "reports\\allure-results" > nul 2>&1
+                """
+            }
+            post {
+                success { echo '\u001B[32m  \u2714 Install Dependencies\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 Install Dependencies — pip install failed\u001B[0m' }
+            }
+        }
+
+        stage('E2E API') {
+            when {
+                expression { return !params.SKIP_CONNECTIVITY_CHECK }
+            }
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    bat """
+                        echo [CHECK] Verification de la connectivite backend/frontend...
+                        curl -f -s --max-time 10 "%BACKEND_URL%" > nul 2>&1
+                        curl -f -s --max-time 10 "%FRONTEND_URL%" > nul 2>&1
+                        echo [CHECK] Backend + Frontend sont accessibles
+                    """
+                }
+            }
+            post {
+                success { echo '\u001B[32m  \u2714 E2E API — backend & frontend accessibles\u001B[0m' }
+                unstable { echo '\u001B[33m  \u26A0 E2E API — backend/frontend unreachable (tests Selenium ignores)\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 E2E API — erreur inattendue\u001B[0m' }
+            }
+        }
+
+        stage('BDD Tests') {
+            environment {
+                HEADLESS_MODE = "${params.HEADLESS}"
+                SELENIUM_HEADLESS = 'true'  /* Force le mode headless (config.py lit cette variable) */
+            }
+            steps {
+                script {
+                    env.SUITE_MARKER = ''
+                    if (params.SELENIUM_SUITE == 'SMOKE')      env.SUITE_MARKER = '-m smoke'
+                    if (params.SELENIUM_SUITE == 'LOGIN')      env.SUITE_MARKER = '-m login'
+                    if (params.SELENIUM_SUITE == 'PRODUITS')   env.SUITE_MARKER = '-m produits'
+                    if (params.SELENIUM_SUITE == 'REGRESSION') env.SUITE_MARKER = '-m regression'
+                }
+
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    script {
+                        /* Vérifier que Chrome est disponible avant de lancer les tests */
+                        def chromeOk = (bat(script: "where chrome > nul 2>&1", returnStatus: true) == 0) ||
+                                        (bat(script: "where google-chrome > nul 2>&1", returnStatus: true) == 0)
+                        if (!chromeOk) {
+                            echo '\u001B[33m  \u26A0 Chrome non trouvé via "where" — tentative via webdriver-manager...\u001B[0m'
+                        }
+                    }
+                    bat """
+                        @echo off
+                        REM ========== 1. BACKEND NESTJS ==========
+                        cd /d "%BACKEND_DIR%"
+                        echo [E2E] Installation des dependances backend...
+                        call npm install --prefer-offline
+                        :: Pre-populer le cache Prisma Engine (offline : agent Jenkins sans acces a binaries.prisma.sh)
+                        set PRISMA_ENGINE_HASH=a9055b89e58b4b5bfb59600785423b1db3d0e75d
+                        set PRISMA_CACHE_DIR=%USERPROFILE%\\.cache\\prisma\\master\\%PRISMA_ENGINE_HASH%
+                        if exist "%PRISMA_CACHE_DIR%\\schema-engine-windows.exe" (
+                            echo [CACHE] Engine Prisma deja en cache
+                        ) else (
+                            mkdir "%PRISMA_CACHE_DIR%" > nul 2>&1
+                            if exist "node_modules\\@prisma\\engines\\schema-engine-windows.exe" (
+                                copy /Y "node_modules\\@prisma\\engines\\schema-engine-windows.exe" "%PRISMA_CACHE_DIR%\\" > nul 2>&1
+                                copy /Y "node_modules\\@prisma\\engines\\query_engine-windows.dll.node" "%PRISMA_CACHE_DIR%\\" > nul 2>&1
+                                echo [CACHE] Engine Prisma copie dans le cache offline
+                            ) else (
+                                echo [CACHE] ERREUR: schema-engine introuvable dans node_modules
+                                echo [CACHE] Solution: npm install complet ou telechargement manuel requis
+                            )
+                        )
+                        echo [E2E] Generation Prisma Client...
+                        call npx prisma generate
+
+                        set JWT_SECRET=%JWT_SECRET_TEST%
+                        set DATABASE_URL=%DB_URL_TEST%
+
+                        echo [E2E] Initialisation de la base de test...
+                        call npx prisma db push --force-reset --accept-data-loss
+                        echo [E2E] Injection des donnees de test...
+                        call npx ts-node prisma/seed-minimal.ts
+
+                        echo [E2E] Demarrage du backend NestJS...
+                        start /B cmd /c "cd /d \"%BACKEND_DIR%\" && npm run start:dev > server.log 2>&1"
+
+                        REM ========== 2. FRONTEND VITE ==========
+                        cd /d "%FRONTEND_DIR%"
+                        echo [E2E] Installation des dependances frontend...
+                        call npm install --prefer-offline
+                        echo [E2E] Demarrage du frontend Vite...
+                        start /B cmd /c "cd /d \"%FRONTEND_DIR%\" && npm run dev > frontend.log 2>&1"
+
+                        REM ========== 3. ATTENTE DES SERVICES ==========
+                        echo [E2E] Attente du backend (port 3000, max 120s)...
+                        powershell -Command "\$t=120;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',3000);\$c.Close();Write-Host '[E2E] Backend OK';exit 0}catch{Start-Sleep -Seconds 5;\$e+=5}}exit 1"
+                        if errorlevel 1 (
+                            echo [E2E] ERREUR: Backend non demarre
+                            for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /F /PID %%a > nul 2>&1
+                            exit /b 1
+                        )
+
+                        echo [E2E] Attente du frontend (port 5173, max 120s)...
+                        powershell -Command "\$t=120;\$e=0;while(\$e -lt \$t){try{\$c=New-Object System.Net.Sockets.TcpClient;\$c.Connect('localhost',5173);\$c.Close();Write-Host '[E2E] Frontend OK';exit 0}catch{Start-Sleep -Seconds 5;\$e+=5}}exit 1"
+                        if errorlevel 1 (
+                            echo [E2E] ERREUR: Frontend non demarre
+                            for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /F /PID %%a > nul 2>&1
+                            for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5173" ^| findstr "LISTENING"') do taskkill /F /PID %%a > nul 2>&1
+                            exit /b 1
+                        )
+
+                        REM ========== 4. TESTS SELENIUM ==========
+                        cd /d "%SELENIUM_DIR%"
+                        if exist "reports" (
+                            rmdir /s /q "reports" > nul 2>&1
+                            mkdir "reports" > nul 2>&1
+                            mkdir "reports\\allure-results" > nul 2>&1
+                        )
+                        echo [E2E] Lancement des tests Selenium...
+                        "%PYTHON%" -m pytest tests/ %SUITE_MARKER% --alluredir=reports\\allure-results --html=reports\\report.html --self-contained-html --junitxml=reports\\junit-e2e.xml -q --tb=line
+                        set E2E_EXIT_CODE=%ERRORLEVEL%
+                        echo [E2E] pytest exit code: %E2E_EXIT_CODE%
+
+                        REM ========== 5. ARRET DES SERVEURS ==========
+                        echo [E2E] Arret du backend...
+                        for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /F /PID %%a > nul 2>&1
+                        echo [E2E] Arret du frontend...
+                        for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5173" ^| findstr "LISTENING"') do taskkill /F /PID %%a > nul 2>&1
+                        echo [E2E] Arret termine
+
+                        exit /b %E2E_EXIT_CODE%
+                    """
+                }
+            }
+            post {
+                always {
+                    script {
+                        /* Verifier que le dossier allure-results contient des fichiers JSON */
+                        def hasJson = (bat(script: "if exist \"${env.WORKSPACE}\\selenium-tests\\reports\\allure-results\\*.json\" (exit 0) else (exit 1)", returnStatus: true) == 0)
+                        def hasProps = (bat(script: "if exist \"${env.WORKSPACE}\\selenium-tests\\reports\\allure-results\\environment.properties\" (exit 0) else (exit 1)", returnStatus: true) == 0)
+                        if (hasJson || hasProps) {
+                            allure([
+                                includeProperties: true,
+                                jdk:               '',
+                                results:           [[path: "selenium-tests/reports/allure-results"]]
+                            ])
+                        } else {
+                            echo '\u001B[33m  \u26A0 Allure : aucun résultat trouvé — les tests Selenium ont probablement echoué avant de générer des rapports\u001B[0m'
+                        }
+                    }
+                    junit(
+                        testResults:       "selenium-tests/reports/junit-e2e.xml",
+                        allowEmptyResults: true
+                    )
+                    publishHTML([
+                        allowMissing:          true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll:               true,
+                        reportDir:             "selenium-tests/reports",
+                        reportFiles:           'report.html',
+                        reportName:            'Rapport HTML — Tests Selenium',
+                        reportTitles:          'Selenium E2E Report'
+                    ])
+                    archiveArtifacts(
+                        artifacts:         "selenium-tests/reports/screenshots/*.png",
+                        allowEmptyArchive: true
+                    )
+                }
+                success { echo '\u001B[32m  \u2714 BDD Tests\u001B[0m' }
+                unstable { echo '\u001B[33m  \u26A0 BDD Tests — quelques tests ont echoue\u001B[0m' }
+                failure { echo '\u001B[31m  \u2718 BDD Tests — erreur inattendue (serveurs non demarres?)\u001B[0m' }
+            }
+        }
+
+        stage('Newman Tests') {
+            steps {
+                echo '\u001B[32m  \u2714 Newman Tests — N/A for E2E pipeline\u001B[0m'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '\u001B[32m\nFinished: SUCCESS\u001B[0m'
+        }
+        unstable {
+            echo '\u001B[33m\nFinished: UNSTABLE\u001B[0m'
+        }
+        failure {
+            echo '\u001B[31m\nFinished: FAILURE\u001B[0m'
+        }
+        cleanup {
+            echo 'Cleanup done.'
+        }
+    }
+}

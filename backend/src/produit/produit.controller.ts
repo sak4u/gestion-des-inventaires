@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ProduitService } from './produit.service';
 import { CreateProduitDto } from './dto/create-produit.dto';
@@ -16,7 +17,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMINISTRATEUR', 'GESTIONNAIRE_STOCK') // Seuls les administrateurs et gestionnaires de stock peuvent gérer les produits
+@Roles('ADMIN', 'RESPONSABLE_STOCK', 'ACHAT')
 @Controller('produits')
 export class ProduitController {
   constructor(private readonly produitService: ProduitService) {}
@@ -29,6 +30,16 @@ export class ProduitController {
   @Get()
   findAll() {
     return this.produitService.findAll();
+  }
+
+  @Get('by-code-barre/lookup')
+  findOneByCodeBare(@Query('codeBare') codeBare: string) {
+    return this.produitService.findOneByCodeBare(codeBare);
+  }
+
+  @Get('by-code-barre/qrcode')
+  generateQrCodeFromCodeBare(@Query('codeBare') codeBare: string) {
+    return this.produitService.generateQrCodeFromCodeBare(codeBare);
   }
 
   @Get(':id')

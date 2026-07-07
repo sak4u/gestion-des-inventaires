@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -27,6 +28,11 @@ enum EtatCommande {
   ANNULEE
 }
 
+enum TypeCommande {
+  ACHAT
+  VENTE
+}
+
 enum StatutProposition {
   EN_ATTENTE
   ACCEPTEE
@@ -49,6 +55,7 @@ model User {
   name         String
   email        String        @unique
   password     String
+  isActive     Boolean       @default(true)
   dateCreation DateTime      @default(now())
   role         Role          @relation(fields: [roleId], references: [id])
   roleId       String
@@ -81,14 +88,14 @@ model Entrepot {
 // ══════════════════════════════════════════════════════════════════════
 
 model Fournisseur {
-  id                  String               @id @default(uuid())
+  id                  String                @id @default(uuid())
   nom                 String
-  email               String?              @unique
+  email               String?               @unique
   telephone           String?
   adresse             String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  commandes           Commande[]           @relation("SupplierOrders")
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  commandes           Commande[]            @relation("SupplierOrders")
   fournisseurProduits FournisseurProduit[]
   propositions        PropositionCommande[]
 }
@@ -100,20 +107,21 @@ model Fournisseur {
 // ══════════════════════════════════════════════════════════════════════
 
 model Produit {
-  id                  String               @id @default(uuid())
+  id                  String                @id @default(uuid())
   nom                 String
-  codeBare            String               @unique
+  codeBare            String                @unique
   category            String
   stockAlert          Int
-  prixActuel          Float                @default(0)
+  prixAchatMoyen      Float                 @default(0) // CUMP
+  prixVente           Float                 @default(0)
   fournisseurProduits FournisseurProduit[]
   commandesLigne      CommandeLigne[]
   fluxDeStocks        FluxDeStock[]
   predictions         Prediction[]
   propositions        PropositionCommande[]
   stockEntrepots      StockEntrepot[]
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -140,21 +148,24 @@ model FournisseurProduit {
 
 model Commande {
   id             String          @id @default(uuid())
+  type           TypeCommande    @default(ACHAT)
   etat           EtatCommande    @default(EN_COURS)
   dateCreation   DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   userId         String
   user           User            @relation("UserOrders", fields: [userId], references: [id], onDelete: Restrict)
-  fournisseurId  String
-  fournisseur    Fournisseur     @relation("SupplierOrders", fields: [fournisseurId], references: [id], onDelete: Restrict)
+  fournisseurId  String?
+  fournisseur    Fournisseur?    @relation("SupplierOrders", fields: [fournisseurId], references: [id], onDelete: Restrict)
   entrepotId     String?
   entrepot       Entrepot?       @relation(fields: [entrepotId], references: [id], onDelete: SetNull)
   propositionId  String?         @unique
+  proposition    PropositionCommande? @relation(fields: [propositionId], references: [id])
   commandesLigne CommandeLigne[]
   fluxDeStocks   FluxDeStock[]
 
   @@index([fournisseurId])
   @@index([userId])
+  @@index([type])
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -162,15 +173,15 @@ model Commande {
 // ══════════════════════════════════════════════════════════════════════
 
 model CommandeLigne {
-  id                String   @id @default(uuid())
-  quantite          Int
-  prixUnitaireAchat Float    @default(0)
-  commandeId        String
-  commande          Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
-  produitId         String
-  produit           Produit  @relation(fields: [produitId], references: [id], onDelete: Restrict)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id           String   @id @default(uuid())
+  quantite     Int
+  prixUnitaire Float    @default(0)
+  commandeId   String
+  commande     Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+  produitId    String
+  produit      Produit  @relation(fields: [produitId], references: [id], onDelete: Restrict)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([commandeId])
   @@index([produitId])
@@ -211,19 +222,19 @@ model FluxDeStock {
 // ══════════════════════════════════════════════════════════════════════
 
 model Prediction {
-  id                    String              @id @default(uuid())
-  estimationSortieDate  DateTime
-  quantiteRecommande    Int
-  CMJ                   Float
-  methode               String              @default("hybrid")
-  fiabilite             Float               @default(0)
-  explication           String              @default("")
-  tendance              String              @default("stable")
-  produitId             String
-  produit               Produit             @relation(fields: [produitId], references: [id], onDelete: Cascade)
-  propositions          PropositionCommande[]
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  id                   String                @id @default(uuid())
+  estimationSortieDate DateTime
+  quantiteRecommande   Int
+  CMJ                  Float
+  methode              String                @default("hybrid")
+  fiabilite            Float                 @default(0)
+  explication          String                @default("")
+  tendance             String                @default("stable")
+  produitId            String
+  produit              Produit               @relation(fields: [produitId], references: [id], onDelete: Cascade)
+  propositions         PropositionCommande[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   @@index([produitId, createdAt(sort: Desc)])
 }
@@ -239,17 +250,18 @@ model PropositionCommande {
   statut           StatutProposition @default(EN_ATTENTE)
   scoreFournisseur Float             @default(0)
 
-  produitId        String
-  produit          Produit     @relation(fields: [produitId], references: [id], onDelete: Cascade)
+  produitId String
+  produit   Produit @relation(fields: [produitId], references: [id], onDelete: Cascade)
 
-  fournisseurId    String
-  fournisseur      Fournisseur @relation(fields: [fournisseurId], references: [id], onDelete: Restrict)
+  fournisseurId String
+  fournisseur   Fournisseur @relation(fields: [fournisseurId], references: [id], onDelete: Restrict)
 
-  predictionId     String
-  prediction       Prediction  @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  predictionId String
+  prediction   Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  commande     Commande?
 
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([produitId])
   @@index([statut])
@@ -263,19 +275,37 @@ model PropositionCommande {
 // ══════════════════════════════════════════════════════════════════════
 
 model StockEntrepot {
-  id         String   @id @default(uuid())
-  quantite   Int      @default(0)
+  id       String @id @default(uuid())
+  quantite Int    @default(0)
 
-  produitId  String
-  produit    Produit  @relation(fields: [produitId], references: [id], onDelete: Cascade)
+  produitId String
+  produit   Produit @relation(fields: [produitId], references: [id], onDelete: Cascade)
 
   entrepotId String
   entrepot   Entrepot @relation(fields: [entrepotId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([produitId, entrepotId])
   @@index([produitId])
   @@index([entrepotId])
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  NOTIFICATIONS (persisted for HTTP polling on serverless platforms)
+// ══════════════════════════════════════════════════════════════════════
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String
+  title     String
+  message   String
+  data      Json?
+  role      String   // target role (ADMIN, ACHAT, etc.)
+  read      Boolean  @default(false)
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([role, createdAt(sort: Desc)])
 }

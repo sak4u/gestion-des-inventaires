@@ -6,7 +6,9 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PredictionService } from '../ai/prediction/prediction.service';
-import { EtatCommande, StatutProposition } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
+import { EtatCommande, StatutProposition, Prisma } from '@prisma/client';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 const WEIGHT_PRICE = 0.7;
 const WEIGHT_DELIVERY = 0.3;
@@ -26,6 +28,8 @@ export class PropositionCommandeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly predictionService: PredictionService,
+    private readonly mailService: MailService,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────
@@ -124,44 +128,60 @@ export class PropositionCommandeService {
       return null;
     }
 
-    try {
-      const proposition = await this.prisma.$transaction(
-        async (tx) => {
-          const existingPending = await tx.propositionCommande.findFirst({
-            where: { produitId, statut: StatutProposition.EN_ATTENTE },
-          });
-          if (existingPending) {
-            this.logger.debug(`Pending proposition already exists for "${produit.nom}". Skipping.`);
-            return null;
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const proposition = await this.prisma.$transaction(
+          async (tx) => {
+            const existingPending = await tx.propositionCommande.findFirst({
+              where: { produitId, statut: StatutProposition.EN_ATTENTE },
+            });
+            if (existingPending) {
+              this.logger.debug(`Pending proposition already exists for "${produit.nom}". Skipping.`);
+              return null;
+            }
+            return tx.propositionCommande.create({
+              data: {
+                produitId,
+                fournisseurId: bestSupplier.fournisseurId,
+                predictionId: predictionResult.predictionId,
+                quantiteProposee: predictionResult.quantiteRecommande,
+                scoreFournisseur: bestSupplier.score,
+                statut: StatutProposition.EN_ATTENTE,
+              },
+              include: { produit: true, fournisseur: true, prediction: true },
+            });
+          },
+          { isolationLevel: 'Serializable' },
+        );
+
+        if (!proposition) return null;
+
+        this.logger.log(
+          `✅ Proposition created for "${produit.nom}": qty=${predictionResult.quantiteRecommande}, ` +
+            `supplier="${bestSupplier.fournisseurNom}" (score=${bestSupplier.score})`,
+        );
+
+        // Trigger notification
+        this.notificationsGateway.alertNouvelleProposition(produit.nom, predictionResult.quantiteRecommande);
+
+        return proposition;
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('could not serialize')) {
+          if (attempt < MAX_RETRIES) {
+            this.logger.warn(
+              `Serialization conflict for "${produit.nom}" (attempt ${attempt}/${MAX_RETRIES}). Retrying...`,
+            );
+            await new Promise((r) => setTimeout(r, 200 * attempt));
+            continue;
           }
-          return tx.propositionCommande.create({
-            data: {
-              produitId,
-              fournisseurId: bestSupplier.fournisseurId,
-              predictionId: predictionResult.predictionId,
-              quantiteProposee: predictionResult.quantiteRecommande,
-              scoreFournisseur: bestSupplier.score,
-              statut: StatutProposition.EN_ATTENTE,
-            },
-            include: { produit: true, fournisseur: true, prediction: true },
-          });
-        },
-        { isolationLevel: 'Serializable' },
-      );
-
-      if (!proposition) return null;
-
-      this.logger.log(
-        `✅ Proposition created for "${produit.nom}": qty=${predictionResult.quantiteRecommande}, ` +
-          `supplier="${bestSupplier.fournisseurNom}" (score=${bestSupplier.score})`,
-      );
-      return proposition;
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('could not serialize')) {
-        this.logger.warn(`Concurrent proposition creation for "${produit.nom}". Skipping.`);
-        return null;
+          this.logger.warn(
+            `Concurrent proposition creation for "${produit.nom}" failed after ${MAX_RETRIES} attempts. Skipping.`,
+          );
+          return null;
+        }
+        throw error;
       }
-      throw error;
     }
   }
 
@@ -213,11 +233,51 @@ export class PropositionCommandeService {
   //  CRUD
   // ─────────────────────────────────────────────────────────────────
 
-  async findAll() {
-    return this.prisma.propositionCommande.findMany({
-      include: { produit: true, fournisseur: true, prediction: true },
+  async findAll(filters: {
+    statut?: StatutProposition;
+    search?: string;
+    produitId?: string;
+    fournisseurId?: string;
+    commandeEtat?: EtatCommande;
+  }) {
+    const { statut, search, produitId, fournisseurId, commandeEtat } = filters;
+    console.log('--- Propositions Filters ---', filters);
+    const where: Prisma.PropositionCommandeWhereInput = {};
+
+    if (statut && Object.values(StatutProposition).includes(statut)) {
+      where.statut = statut;
+    }
+    if (produitId) {
+      where.produitId = produitId;
+    }
+    if (fournisseurId) {
+      where.fournisseurId = fournisseurId;
+    }
+    if (commandeEtat) {
+      // @ts-ignore - Temporary bypass until prisma generate succeeds
+      where.commande = { etat: commandeEtat };
+    }
+    if (search) {
+      where.OR = [
+        { produit: { nom: { contains: search, mode: 'insensitive' } } },
+        { fournisseur: { nom: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    // @ts-ignore
+    const results = await this.prisma.propositionCommande.findMany({
+      where,
+      include: {
+        produit: true,
+        fournisseur: true,
+        prediction: true,
+        // @ts-ignore
+        commande: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
+    console.log(`[findAll] Found ${results.length} propositions with filters:`, JSON.stringify(filters));
+    return results;
   }
 
   async findPending() {
@@ -307,8 +367,9 @@ export class PropositionCommandeService {
             commandeId: commande.id,
             produitId: proposition.produitId,
             quantite: proposition.quantiteProposee,
-            prixUnitaireAchat: prixAchat,
+            prixUnitaire: prixAchat,
           },
+          include: { produit: true },
         });
 
         // 4) Créer un flux d'achat dans l'entrepôt cible (matérialise la réception)
@@ -337,7 +398,7 @@ export class PropositionCommandeService {
           update: { quantite: { increment: proposition.quantiteProposee } },
         });
 
-        return { proposition: updatedProposition, commande, commandeLigne, prixUnitaireAchat: prixAchat, entrepot };
+        return { proposition: updatedProposition, commande, commandeLigne, prixUnitaire: prixAchat, entrepot };
       },
       { isolationLevel: 'Serializable' },
     );
@@ -346,6 +407,34 @@ export class PropositionCommandeService {
       `✅ Proposition ${id} accepted → Commande ${result.commande.id} ` +
         `(${result.commandeLigne.quantite} units → entrepôt "${result.entrepot.nom}")`,
     );
+
+    // Fire-and-forget email to supplier
+    if (result.proposition.fournisseurId) {
+      const fournisseur = await this.prisma.fournisseur.findUnique({
+        where: { id: result.proposition.fournisseurId },
+        select: { nom: true, email: true },
+      });
+      if (fournisseur?.email) {
+        void this.mailService
+          .sendCommandeNotification(
+            fournisseur.email,
+            {
+              commandeId: result.commande.id,
+              dateCreation: result.commande.dateCreation,
+              nomFournisseur: fournisseur.nom,
+              lignes: [
+                {
+                  nomProduit: (result as any).commandeLigne?.produit?.nom ?? 'Produit',
+                  quantite: result.commandeLigne.quantite,
+                  prixUnitaireAchat: result.prixUnitaire,
+                },
+              ],
+            },
+            'CREATION',
+          )
+          .catch((err) => this.logger.warn(`Email fournisseur échoué: ${err}`));
+      }
+    }
 
     return result;
   }

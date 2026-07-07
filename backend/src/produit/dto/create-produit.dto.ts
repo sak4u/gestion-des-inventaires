@@ -21,5 +21,10 @@ export class CreateProduitDto {
   @IsNumber()
   @IsOptional()
   @Min(0)
-  prixActuel?: number;
+  prixAchatMoyen?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  prixVente?: number;
 }

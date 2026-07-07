@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="84" failures="0" errors="0" time="4.334">
+  <testsuite name="EntrepotService" errors="0" failures="0" skipped="0" timestamp="2026-06-22T18:20:36" time="2.463" tests="13">
+    <testcase classname="EntrepotService &gt; create()" name="crée et retourne un entrepôt avec les données fournies" time="0.048">
+    </testcase>
+    <testcase classname="EntrepotService &gt; create()" name="crée un entrepôt sans adresse ni capaciteMax (champs optionnels)" time="0.009">
+    </testcase>
+    <testcase classname="EntrepotService &gt; findAll()" name="retourne tous les entrepôts sans filtre avec stockTotal calculé" time="0.014">
+    </testcase>
+    <testcase classname="EntrepotService &gt; findAll()" name="filtre par adresse (insensitive)" time="0.007">
+    </testcase>
+    <testcase classname="EntrepotService &gt; findAll()" name="filtre par capaciteMax" time="0.009">
+    </testcase>
+    <testcase classname="EntrepotService &gt; findAll()" name="retourne stockTotalEntrepot = 0 si aucun stock" time="0.007">
+    </testcase>
+    <testcase classname="EntrepotService &gt; findAll()" name="retourne un tableau vide si aucun entrepôt" time="0.006">
+    </testcase>
+    <testcase classname="EntrepotService &gt; findOne()" name="retourne l&apos;entrepôt avec stockTotalEntrepot calculé" time="0.011">
+    </testcase>
+    <testcase classname="EntrepotService &gt; findOne()" name="lève NotFoundException si l&apos;ID n&apos;existe pas" time="0.03">
+    </testcase>
+    <testcase classname="EntrepotService &gt; update()" name="met à jour et retourne l&apos;entrepôt modifié" time="0.005">
+    </testcase>
+    <testcase classname="EntrepotService &gt; update()" name="lève NotFoundException si l&apos;ID n&apos;existe pas" time="0.006">
+    </testcase>
+    <testcase classname="EntrepotService &gt; remove()" name="supprime et retourne l&apos;entrepôt" time="0.005">
+    </testcase>
+    <testcase classname="EntrepotService &gt; remove()" name="lève NotFoundException si l&apos;ID n&apos;existe pas" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="ProduitService" errors="0" failures="0" skipped="0" timestamp="2026-06-22T18:20:36" time="2.612" tests="15">
+    <testcase classname="ProduitService &gt; create()" name="crée et retourne un produit" time="0.036">
+    </testcase>
+    <testcase classname="ProduitService &gt; findAll()" name="retourne la liste des produits avec stockTotal calculé (somme des entrepôts)" time="0.009">
+    </testcase>
+    <testcase classname="ProduitService &gt; findAll()" name="retourne un tableau vide si aucun produit" time="0.007">
+    </testcase>
+    <testcase classname="ProduitService &gt; findAll()" name="calcule stockTotal = 0 si stockEntrepots est vide" time="0.018">
+    </testcase>
+    <testcase classname="ProduitService &gt; findOne()" name="retourne le produit avec stockTotal calculé quand l&apos;ID existe" time="0.007">
+    </testcase>
+    <testcase classname="ProduitService &gt; findOne()" name="lève NotFoundException quand l&apos;ID n&apos;existe pas" time="0.027">
+    </testcase>
+    <testcase classname="ProduitService &gt; findOneByCodeBare()" name="retourne le produit avec stockTotal si le codeBare existe" time="0.004">
+    </testcase>
+    <testcase classname="ProduitService &gt; findOneByCodeBare()" name="lève BadRequestException si codeBare est une chaîne vide" time="0.007">
+    </testcase>
+    <testcase classname="ProduitService &gt; findOneByCodeBare()" name="lève BadRequestException si codeBare est uniquement des espaces" time="0.005">
+    </testcase>
+    <testcase classname="ProduitService &gt; findOneByCodeBare()" name="lève NotFoundException si le codeBare n&apos;existe pas en base" time="0.004">
+    </testcase>
+    <testcase classname="ProduitService &gt; update()" name="met à jour le produit et retourne les données mises à jour" time="0.003">
+    </testcase>
+    <testcase classname="ProduitService &gt; update()" name="ne modifie pas prixAchatMoyen (CUMP protégé — recalculé uniquement à la livraison)" time="0.003">
+    </testcase>
+    <testcase classname="ProduitService &gt; update()" name="lève NotFoundException si l&apos;ID n&apos;existe pas" time="0.003">
+    </testcase>
+    <testcase classname="ProduitService &gt; remove()" name="supprime le produit et retourne ses données" time="0.006">
+    </testcase>
+    <testcase classname="ProduitService &gt; remove()" name="lève NotFoundException si l&apos;ID n&apos;existe pas" time="0.004">
+    </testcase>
+  </testsuite>
+  <testsuite name="FluxDeStockService" errors="0" failures="0" skipped="0" timestamp="2026-06-22T18:20:36" time="2.854" tests="20">
+    <testcase classname="FluxDeStockService &gt; create()" name="lève BadRequestException si le type est &quot;achat&quot; (automatique uniquement)" time="0.064">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; create()" name="crée un flux &quot;vente&quot; avec mise à jour du stock" time="0.012">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; create()" name="lève NotFoundException si lentrepôt nexiste pas" time="0.007">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; create()" name="lève NotFoundException si le produit nexiste pas" time="0.005">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; create()" name="lève BadRequestException si le stock local devient négatif" time="0.007">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; create()" name="lève BadRequestException si la capacité de lentrepôt est dépassée" time="0.007">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; create()" name="crée un flux &quot;correction_inventaire&quot; avec le signe conservé" time="0.005">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; findAll()" name="retourne tous les flux de stock" time="0.007">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; findAll()" name="retourne un tableau vide si aucun flux" time="0.003">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; findOne()" name="retourne le flux quand lID existe" time="0.003">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; findOne()" name="lève NotFoundException quand lID nexiste pas" time="0.003">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; update()" name="met à jour un flux avec recalcul du delta net" time="0.003">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; update()" name="lève NotFoundException si le flux nexiste pas" time="0.004">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; update()" name="lève BadRequestException si achat sans commandeId" time="0.004">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; remove()" name="supprime un flux avec inversion du delta" time="0.003">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; remove()" name="lève NotFoundException si le flux nexiste pas" time="0.003">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; transfert()" name="lève BadRequestException si source = destination" time="0.003">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; transfert()" name="réalise un transfert entre deux entrepôts" time="0.005">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; transfert()" name="lève BadRequestException si stock source insuffisant" time="0.003">
+    </testcase>
+    <testcase classname="FluxDeStockService &gt; transfert()" name="lève NotFoundException si entrepôt source introuvable" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="CommandeService" errors="0" failures="0" skipped="0" timestamp="2026-06-22T18:20:36" time="2.949" tests="21">
+    <testcase classname="CommandeService &gt; create()" name="crée et retourne une commande avec les données fournies" time="0.036">
+    </testcase>
+    <testcase classname="CommandeService &gt; create()" name="lève BadRequestException si ACHAT sans fournisseurId" time="0.051">
+    </testcase>
+    <testcase classname="CommandeService &gt; create()" name="lève BadRequestException si ACHAT sans entrepotId" time="0.008">
+    </testcase>
+    <testcase classname="CommandeService &gt; create()" name="accepte une commande VENTE sans fournisseurId ni entrepotId" time="0.013">
+    </testcase>
+    <testcase classname="CommandeService &gt; findAll()" name="retourne toutes les commandes sans filtre" time="0.007">
+    </testcase>
+    <testcase classname="CommandeService &gt; findAll()" name="filtre par type ACHAT" time="0.005">
+    </testcase>
+    <testcase classname="CommandeService &gt; findAll()" name="filtre par etat EN_COURS" time="0.004">
+    </testcase>
+    <testcase classname="CommandeService &gt; findAll()" name="retourne un tableau vide si aucune commande" time="0.003">
+    </testcase>
+    <testcase classname="CommandeService &gt; findOne()" name="retourne la commande quand l&apos;ID existe" time="0.003">
+    </testcase>
+    <testcase classname="CommandeService &gt; findOne()" name="lève NotFoundException quand l&apos;ID n&apos;existe pas" time="0.002">
+    </testcase>
+    <testcase classname="CommandeService &gt; getFinancialStats()" name="calcule les statistiques financières à partir des ventes livrées" time="0.003">
+    </testcase>
+    <testcase classname="CommandeService &gt; getFinancialStats()" name="retourne des stats à zéro si aucune vente livrée" time="0.002">
+    </testcase>
+    <testcase classname="CommandeService &gt; update()" name="lève NotFoundException si la commande n&apos;existe pas" time="0.002">
+    </testcase>
+    <testcase classname="CommandeService &gt; update()" name="lève BadRequestException si la commande est déjà LIVREE" time="0.002">
+    </testcase>
+    <testcase classname="CommandeService &gt; update()" name="lève BadRequestException si la commande est déjà ANNULEE" time="0.002">
+    </testcase>
+    <testcase classname="CommandeService &gt; update()" name="passe la commande à LIVREE avec flux de stock et alertes" time="0.004">
+    </testcase>
+    <testcase classname="CommandeService &gt; update()" name="met à jour les champs standards (ex: FERMEE) et envoie un email" time="0.002">
+    </testcase>
+    <testcase classname="CommandeService &gt; update()" name="met à jour une commande sans envoyer d&apos;email si pas FERMEE" time="0.002">
+    </testcase>
+    <testcase classname="CommandeService &gt; remove()" name="lève NotFoundException si la commande n&apos;existe pas" time="0.002">
+    </testcase>
+    <testcase classname="CommandeService &gt; remove()" name="lève BadRequestException si la commande est LIVREE" time="0.003">
+    </testcase>
+    <testcase classname="CommandeService &gt; remove()" name="supprime et retourne la commande si elle existe et modifiable" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="AuthService" errors="0" failures="0" skipped="0" timestamp="2026-06-22T18:20:36" time="3.21" tests="15">
+    <testcase classname="AuthService &gt; login()" name="retourne un token JWT pour des credentials valides" time="0.135">
+    </testcase>
+    <testcase classname="AuthService &gt; login()" name="lève UnauthorizedException si le mot de passe est incorrect" time="0.132">
+    </testcase>
+    <testcase classname="AuthService &gt; login()" name="lève UnauthorizedException si l&apos;utilisateur est introuvable" time="0.006">
+    </testcase>
+    <testcase classname="AuthService &gt; login()" name="lève UnauthorizedException si le compte est désactivé (isActive = false)" time="0.094">
+    </testcase>
+    <testcase classname="AuthService &gt; forgotPassword()" name="retourne un message générique si l&apos;email n&apos;existe pas (sécurité)" time="0.004">
+    </testcase>
+    <testcase classname="AuthService &gt; forgotPassword()" name="génère un resetCode et envoie un email si l&apos;utilisateur existe" time="0.005">
+    </testcase>
+    <testcase classname="AuthService &gt; resetPassword()" name="lève UnauthorizedException si le code est invalide" time="0.003">
+    </testcase>
+    <testcase classname="AuthService &gt; resetPassword()" name="lève UnauthorizedException si le code est expiré" time="0.003">
+    </testcase>
+    <testcase classname="AuthService &gt; resetPassword()" name="met à jour le mot de passe si le code est valide et non expiré" time="0.065">
+    </testcase>
+    <testcase classname="AuthService &gt; getRoles()" name="retourne les 3 rôles disponibles" time="0.002">
+    </testcase>
+    <testcase classname="AuthService &gt; getUsers()" name="retourne la liste de tous les utilisateurs" time="0.002">
+    </testcase>
+    <testcase classname="AuthService &gt; createUserByAdmin()" name="lève BadRequestException si l&apos;email existe déjà" time="0.002">
+    </testcase>
+    <testcase classname="AuthService &gt; createUserByAdmin()" name="lève BadRequestException si le rôle est invalide" time="0.001">
+    </testcase>
+    <testcase classname="AuthService &gt; toggleActive()" name="lève NotFoundException si l&apos;utilisateur n&apos;existe pas" time="0.002">
+    </testcase>
+    <testcase classname="AuthService &gt; toggleActive()" name="bascule isActive de true à false" time="0.002">
+    </testcase>
+  </testsuite>
+</testsuites>
